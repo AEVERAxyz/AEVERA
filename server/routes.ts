@@ -13,6 +13,7 @@ export async function registerRoutes(
   app.post(api.capsules.create.path, async (req, res) => {
     try {
       const input = api.capsules.create.input.parse(req.body);
+      // Backend receives pre-encrypted content from frontend
       const capsule = await storage.createCapsule(input);
       res.status(201).json(capsule);
     } catch (err) {
@@ -32,12 +33,16 @@ export async function registerRoutes(
       return res.status(404).json({ message: 'Capsule not found' });
     }
     
-    // Only return content if revealed
-    if (new Date() < new Date(capsule.revealDate)) {
-       return res.json({ ...capsule, content: "Locked until " + capsule.revealDate });
-    }
+    // Only return encrypted content; frontend is responsible for decryption
+    const now = new Date();
+    const revealDate = new Date(capsule.revealDate);
+    const isRevealed = now >= revealDate;
 
-    res.json(capsule);
+    res.json({
+      ...capsule,
+      // Don't expose any decrypted content - only signal to frontend if it's time to decrypt
+      isRevealed
+    });
   });
 
   // --- Farcaster Frame Routes ---
@@ -55,32 +60,53 @@ export async function registerRoutes(
       return res.status(404).send('Capsule not found');
     }
 
-    // Basic HTML with Frame Metadata
-    const host = req.get('host');
-    const protocol = req.protocol;
+    const host = req.get('host') || 'localhost:5000';
+    const protocol = req.protocol || 'http';
     const baseUrl = `${protocol}://${host}`;
-    
-    // For MVP, using a placeholder image service or static image
-    const imageUrl = `https://placehold.co/600x400?text=TimeCapsule+Locked`;
+    const now = new Date();
+    const revealDate = new Date(capsule.revealDate);
+    const isRevealed = now >= revealDate;
 
+    const imageUrl = isRevealed 
+      ? `https://placehold.co/1200x630?text=TimeCapsule+REVEALED`
+      : `https://placehold.co/1200x630?text=TimeCapsule+LOCKED`;
+
+    // Proper Farcaster Frame spec (vNext)
     const html = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>TimeCapsule</title>
+          <meta charset="utf-8">
+          <title>TimeCapsule - Farcaster Frame</title>
+          <!-- Open Graph -->
           <meta property="og:title" content="TimeCapsule" />
+          <meta property="og:description" content="A time-locked message revealed on Base" />
           <meta property="og:image" content="${imageUrl}" />
+          <meta property="og:url" content="${baseUrl}/frame/${capsule.id}" />
+          
+          <!-- Farcaster Frame Specification (vNext) -->
           <meta property="fc:frame" content="vNext" />
           <meta property="fc:frame:image" content="${imageUrl}" />
-          <meta property="fc:frame:button:1" content="Reveal Message" />
-          <meta property="fc:frame:post_url" content="${baseUrl}/frame/${capsule.id}" />
+          <meta property="fc:frame:image:aspect_ratio" content="1.91:1" />
+          
+          <meta property="fc:frame:button:1" content="${isRevealed ? 'View Message' : 'Check Status'}" />
+          <meta property="fc:frame:button:1:action" content="post" />
+          <meta property="fc:frame:button:1:target" content="${baseUrl}/frame/${capsule.id}" />
+          
+          ${isRevealed ? `
+          <meta property="fc:frame:button:2" content="Mint NFT" />
+          <meta property="fc:frame:button:2:action" content="link" />
+          <meta property="fc:frame:button:2:target" content="https://zora.co" />
+          ` : ''}
         </head>
         <body>
           <h1>TimeCapsule</h1>
-          <p>This message is locked until ${new Date(capsule.revealDate).toLocaleString()}</p>
+          <p>Status: ${isRevealed ? 'Revealed' : 'Locked'}</p>
+          <p>Reveal Date: ${revealDate.toUTCString()}</p>
         </body>
       </html>
     `;
+    res.set('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   });
 
@@ -97,45 +123,42 @@ export async function registerRoutes(
       return res.status(404).json({ message: 'Capsule not found' });
     }
 
-    const host = req.get('host');
-    const protocol = req.protocol;
+    const host = req.get('host') || 'localhost:5000';
+    const protocol = req.protocol || 'http';
     const baseUrl = `${protocol}://${host}`;
     const now = new Date();
     const revealDate = new Date(capsule.revealDate);
-
     const isRevealed = now >= revealDate;
 
-    let imageUrl;
-    let buttonText;
-    let messageText;
+    const imageUrl = isRevealed 
+      ? `https://placehold.co/1200x630?text=TimeCapsule+REVEALED`
+      : `https://placehold.co/1200x630?text=TimeCapsule+LOCKED`;
 
-    if (isRevealed) {
-       // Revealed state
-       // We need to render the text into the image or return a new image
-       // For MVP, we'll use placehold.co with the text if it fits, or just "REVEALED"
-       // Real implementation would use @vercel/og or similar to generate image
-       const safeContent = encodeURIComponent(capsule.content.substring(0, 50)); // Truncate for URL safety in placeholder
-       imageUrl = `https://placehold.co/600x400?text=${safeContent}`;
-       buttonText = "Mint as NFT (Coming Soon)";
-       messageText = `Revealed: ${capsule.content}`;
-    } else {
-       // Still locked
-       const timeLeft = Math.ceil((revealDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)); // Days
-       imageUrl = `https://placehold.co/600x400?text=Locked+for+${timeLeft}+more+days`;
-       buttonText = "Check Again Later";
-       messageText = "Still locked!";
-    }
-
-    // Return Frame Response
+    // Farcaster Frame Response (vNext)
     res.json({
       version: "vNext",
       image: imageUrl,
-      buttons: [
-        {
-          label: buttonText,
-        },
-      ],
-      // If we wanted to link to mint, we'd use 'link' action or a mint transaction
+      imageAspectRatio: "1.91:1",
+      buttons: isRevealed 
+        ? [
+            {
+              label: "View Message",
+              action: "post",
+              target: `${baseUrl}/frame/${capsule.id}`
+            },
+            {
+              label: "Mint NFT",
+              action: "link",
+              target: "https://zora.co"
+            }
+          ]
+        : [
+            {
+              label: "Check Again Later",
+              action: "post",
+              target: `${baseUrl}/frame/${capsule.id}`
+            }
+          ]
     });
   });
 

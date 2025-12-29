@@ -4,7 +4,8 @@ import { z } from "zod";
 
 export const capsules = pgTable("capsules", {
   id: uuid("id").primaryKey().defaultRandom(),
-  content: text("content").notNull(),
+  encryptedContent: text("encrypted_content").notNull(),
+  messageHash: text("message_hash").notNull(),
   revealDate: timestamp("reveal_date").notNull(),
   transactionHash: text("transaction_hash"),
   isMinted: boolean("is_minted").default(false),
@@ -12,7 +13,8 @@ export const capsules = pgTable("capsules", {
 });
 
 export const insertCapsuleSchema = createInsertSchema(capsules).pick({
-  content: true,
+  encryptedContent: true,
+  messageHash: true,
   revealDate: true,
 });
 
