@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { NeynarAuthButton, useNeynarContext } from "@neynar/react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -8,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, CheckCircle, ChevronDown } from "lucide-react";
+import { User, CheckCircle, Loader2 } from "lucide-react";
 
 export interface Identity {
   type: "farcaster";
@@ -16,7 +15,9 @@ export interface Identity {
   username?: string;
   fid?: number;
   address?: string;
+  pfpUrl?: string;
   verifications?: string[];
+  signerUuid?: string;
 }
 
 interface Props {
@@ -24,39 +25,135 @@ interface Props {
   identity: Identity | null;
 }
 
+interface NeynarUser {
+  fid: number;
+  username: string;
+  display_name: string;
+  pfp_url?: string;
+  verified_addresses?: {
+    eth_addresses?: string[];
+  };
+}
+
+interface SIWNData {
+  fid: number;
+  signer_uuid: string;
+}
+
+declare global {
+  interface Window {
+    onSignInSuccess?: (data: SIWNData) => void;
+  }
+}
+
+const NEYNAR_CLIENT_ID = import.meta.env.VITE_NEYNAR_CLIENT_ID || "";
+
 export function IdentityModule({ onIdentityChange, identity }: Props) {
-  const { user, isAuthenticated, logoutUser } = useNeynarContext();
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedIdentity, setSelectedIdentity] = useState<string>("username");
   const [verifications, setVerifications] = useState<string[]>([]);
+  const [user, setUser] = useState<NeynarUser | null>(null);
+  const [signerUuid, setSignerUuid] = useState<string | null>(null);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  const updateIdentityFromUser = useCallback((userData: NeynarUser, selected: string, signer: string) => {
+    const userVerifications: string[] = [];
+    
+    if (userData.verified_addresses?.eth_addresses) {
+      userData.verified_addresses.eth_addresses.forEach((addr: string) => {
+        userVerifications.push(addr);
+      });
+    }
+    
+    setVerifications(userVerifications);
+    
+    const displayName = selected === "username" 
+      ? `@${userData.username}` 
+      : formatAddress(selected);
+    
+    onIdentityChange({
+      type: "farcaster",
+      displayName,
+      username: userData.username,
+      fid: userData.fid,
+      address: selected === "username" ? undefined : selected,
+      pfpUrl: userData.pfp_url,
+      verifications: userVerifications,
+      signerUuid: signer,
+    });
+  }, [onIdentityChange]);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const userVerifications: string[] = [];
-      
-      if (user.verified_addresses?.eth_addresses) {
-        user.verified_addresses.eth_addresses.forEach((addr: string) => {
-          userVerifications.push(addr);
-        });
+    const storedUser = localStorage.getItem("farcaster_user");
+    const storedSigner = localStorage.getItem("neynar_signer_uuid");
+    
+    if (storedUser && storedSigner) {
+      try {
+        const parsedUser = JSON.parse(storedUser) as NeynarUser;
+        setUser(parsedUser);
+        setSignerUuid(storedSigner);
+        updateIdentityFromUser(parsedUser, "username", storedSigner);
+      } catch (e) {
+        localStorage.removeItem("farcaster_user");
+        localStorage.removeItem("neynar_signer_uuid");
       }
-      
-      setVerifications(userVerifications);
-      
-      const displayName = selectedIdentity === "username" 
-        ? `@${user.username}` 
-        : formatAddress(selectedIdentity);
-      
-      onIdentityChange({
-        type: "farcaster",
-        displayName,
-        username: user.username,
-        fid: user.fid,
-        address: selectedIdentity === "username" ? undefined : selectedIdentity,
-        verifications: userVerifications,
-      });
-    } else {
-      onIdentityChange(null);
     }
-  }, [isAuthenticated, user, selectedIdentity]);
+  }, [updateIdentityFromUser]);
+
+  useEffect(() => {
+    window.onSignInSuccess = async (data: SIWNData) => {
+      console.log("SIWN success callback received:", data);
+      setIsLoading(true);
+      setSignerUuid(data.signer_uuid);
+      localStorage.setItem("neynar_signer_uuid", data.signer_uuid);
+      
+      try {
+        const response = await fetch(`/api/farcaster/user/${data.fid}`);
+        if (response.ok) {
+          const userData = await response.json() as NeynarUser;
+          console.log("User data fetched:", userData);
+          setUser(userData);
+          localStorage.setItem("farcaster_user", JSON.stringify(userData));
+          updateIdentityFromUser(userData, "username", data.signer_uuid);
+        } else {
+          console.error("Failed to fetch user data:", response.status);
+        }
+      } catch (e) {
+        console.error("Failed to fetch user data:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    return () => {
+      delete window.onSignInSuccess;
+    };
+  }, [updateIdentityFromUser]);
+
+  useEffect(() => {
+    if (user || scriptLoaded) return;
+
+    const existingScript = document.querySelector('script[src*="siwn"]');
+    if (existingScript) {
+      setScriptLoaded(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://neynarxyz.github.io/siwn/raw/1.2.0/index.js";
+    script.async = true;
+    script.onload = () => {
+      console.log("SIWN script loaded");
+      setScriptLoaded(true);
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      if (script.parentNode && !user) {
+        script.parentNode.removeChild(script);
+      }
+    };
+  }, [user, scriptLoaded]);
 
   const formatAddress = (addr: string): string => {
     if (addr.endsWith('.eth') || addr.endsWith('.base.eth')) {
@@ -67,16 +164,48 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
 
   const handleIdentitySelect = (value: string) => {
     setSelectedIdentity(value);
+    if (user && signerUuid) {
+      updateIdentityFromUser(user, value, signerUuid);
+    }
   };
 
   const handleDisconnect = () => {
-    logoutUser();
+    localStorage.removeItem("farcaster_user");
+    localStorage.removeItem("neynar_signer_uuid");
+    setUser(null);
+    setSignerUuid(null);
     setSelectedIdentity("username");
     setVerifications([]);
     onIdentityChange(null);
+    setScriptLoaded(false);
+    
+    const existingScript = document.querySelector('script[src*="siwn"]');
+    if (existingScript && existingScript.parentNode) {
+      existingScript.parentNode.removeChild(existingScript);
+    }
+    
+    setTimeout(() => {
+      const script = document.createElement("script");
+      script.src = "https://neynarxyz.github.io/siwn/raw/1.2.0/index.js";
+      script.async = true;
+      script.onload = () => setScriptLoaded(true);
+      document.head.appendChild(script);
+    }, 100);
   };
 
-  if (isAuthenticated && user) {
+  if (isLoading) {
+    return (
+      <div className="relative group">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-accent/30 rounded-xl blur opacity-30"></div>
+        <div className="relative bg-black/50 border border-white/10 rounded-xl p-6 text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+          <p className="mt-3 text-muted-foreground">Signing in...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (user) {
     return (
       <div className="relative group">
         <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-accent/30 rounded-xl blur opacity-30"></div>
@@ -163,8 +292,13 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
             Connect your Farcaster account to seal the capsule with your identity.
           </p>
           
-          <div className="flex justify-center" data-testid="button-connect-farcaster">
-            <NeynarAuthButton />
+          <div className="flex justify-center" data-testid="siwn-container">
+            <div 
+              className="neynar_signin"
+              data-client_id={NEYNAR_CLIENT_ID}
+              data-success-callback="onSignInSuccess"
+              data-theme="dark"
+            />
           </div>
           
           <p className="mt-4 text-xs text-muted-foreground/60">

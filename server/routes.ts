@@ -83,6 +83,61 @@ export async function registerRoutes(
     }
   });
 
+  // --- Farcaster User Lookup ---
+
+  app.get('/api/farcaster/user/:fid', async (req, res) => {
+    const fidSchema = z.string().regex(/^\d+$/);
+    const result = fidSchema.safeParse(req.params.fid);
+    
+    if (!result.success) {
+      return res.status(400).json({ message: 'Invalid FID' });
+    }
+
+    const fid = req.params.fid;
+    const apiKey = process.env.NEYNAR_API_KEY;
+    
+    if (!apiKey) {
+      return res.status(500).json({ message: 'Neynar API key not configured' });
+    }
+
+    try {
+      const response = await fetch(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${fid}`, {
+        headers: {
+          'accept': 'application/json',
+          'api_key': apiKey,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Neynar API error: ${response.status}`);
+      }
+
+      const data = await response.json() as { users: Array<{
+        fid: number;
+        username: string;
+        display_name: string;
+        pfp_url?: string;
+        verified_addresses?: { eth_addresses?: string[] };
+      }> };
+      
+      if (!data.users || data.users.length === 0) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const user = data.users[0];
+      res.json({
+        fid: user.fid,
+        username: user.username,
+        display_name: user.display_name,
+        pfp_url: user.pfp_url,
+        verified_addresses: user.verified_addresses,
+      });
+    } catch (error) {
+      console.error('Neynar API error:', error);
+      res.status(500).json({ message: 'Failed to fetch user data' });
+    }
+  });
+
   // --- Farcaster Frame Routes ---
 
   app.get('/frame/:id', async (req, res) => {

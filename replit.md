@@ -4,6 +4,16 @@
 
 TimeCapsule is a web application that allows users to create encrypted time-locked messages that can only be revealed after a specified date. Users write a message, set a future reveal date, and the application encrypts the content client-side before storing it. When the reveal date passes, the message is automatically decrypted and displayed. The application supports sharing capsules via unique URLs and integration with Farcaster (Warpcast) for social sharing, with planned NFT minting functionality for revealed messages.
 
+### Authentication
+- **Farcaster Sign-In**: Users authenticate via Neynar's Sign in with Farcaster popup flow
+- **Identity Selection**: After sign-in, users can choose to post as their @username or any verified address (ENS/.base.eth)
+- **Environment Variables**: Requires `NEYNAR_API_KEY` (server) and `VITE_NEYNAR_CLIENT_ID` (client)
+
+### Design Theme
+- **Color Scheme**: Base Blue (#1652F0) primary color with azure accents
+- **Background**: Charcoal (#050505) with subtle blue gradient orbs
+- **Effects**: Neon glow effects using Base Blue on buttons and containers
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
