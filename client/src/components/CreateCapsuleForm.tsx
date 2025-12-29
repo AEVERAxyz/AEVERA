@@ -65,10 +65,10 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
   });
 
   const onSubmit = async (data: CreateCapsuleFormData) => {
-    if (!identity || identity.type === "anonymous") {
+    if (!identity) {
       toast({
         title: "Identity Required",
-        description: "Please connect your wallet to seal the capsule.",
+        description: "Please sign in with Farcaster to seal the capsule.",
         variant: "destructive",
       });
       return;
@@ -156,7 +156,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
     }
   };
 
-  const canSubmit = identity && identity.type !== "anonymous" && form.formState.isDirty;
+  const canSubmit = identity && form.formState.isDirty;
 
   return (
     <Form {...form}>
@@ -175,7 +175,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
                 <div className="relative group">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
                   <Textarea
-                    placeholder="Write something meaningful..."
+                    placeholder="Write your message..."
                     className="relative bg-black/50 border-white/10 min-h-[160px] resize-none text-lg p-6 rounded-xl focus:ring-0 focus:border-transparent placeholder:text-muted-foreground/50"
                     data-testid="textarea-message"
                     {...field}
@@ -259,9 +259,9 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           </Button>
         </motion.div>
 
-        {!canSubmit && identity?.type === "anonymous" && (
+        {!identity && (
           <p className="text-center text-sm text-muted-foreground">
-            Connect your wallet above to seal your capsule.
+            Sign in with Farcaster above to seal your capsule.
           </p>
         )}
       </form>
