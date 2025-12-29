@@ -1,31 +1,17 @@
 import { motion } from "framer-motion";
-import { Check, Copy, ExternalLink, Share2, Key } from "lucide-react";
+import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface Props {
   capsuleId: string;
   onReset: () => void;
 }
 
-interface CapsuleKeyData {
-  key: string;
-  hash: string;
-}
-
 export function SuccessCard({ capsuleId, onReset }: Props) {
   const { toast } = useToast();
   const [hasCopied, setHasCopied] = useState(false);
-  const [keyData, setKeyData] = useState<CapsuleKeyData | null>(null);
-
-  useEffect(() => {
-    // Retrieve encryption key from session storage
-    const stored = sessionStorage.getItem(`capsule_${capsuleId}_key`);
-    if (stored) {
-      setKeyData(JSON.parse(stored));
-    }
-  }, [capsuleId]);
 
   // Construct the Frame URL
   const frameUrl = `${window.location.origin}/frame/${capsuleId}`;
@@ -90,56 +76,6 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
         </div>
       </div>
 
-      {/* Encryption Key */}
-      {keyData && (
-        <div className="bg-black/40 rounded-xl p-4 border border-accent/20 space-y-2 text-left">
-          <p className="text-xs uppercase tracking-wider text-accent font-semibold flex items-center gap-2">
-            <Key className="w-3 h-3" />
-            Encryption Key (Save This!)
-          </p>
-          <div className="flex items-center gap-2 bg-black/60 p-3 rounded-lg border border-accent/20">
-            <code className="text-xs text-accent/80 flex-1 font-mono break-all">
-              {keyData.key}
-            </code>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 hover:bg-accent/10 text-accent hover:text-accent"
-              onClick={() => copyToClipboard(keyData.key, "Encryption Key")}
-              data-testid="button-copy-encryption-key"
-            >
-              <Copy className="w-4 h-4" />
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Keep this key safe! You'll need it to decrypt your message after the reveal date.
-          </p>
-        </div>
-      )}
-
-      {/* Message Hash */}
-      {keyData && (
-        <div className="bg-black/40 rounded-xl p-4 border border-white/5 space-y-2 text-left">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Message Hash</p>
-          <div className="flex items-center gap-2 bg-black/60 p-3 rounded-lg border border-white/5">
-            <code className="text-xs text-muted-foreground/80 flex-1 font-mono break-all">
-              {keyData.hash}
-            </code>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-8 w-8 hover:bg-white/10 text-muted-foreground hover:text-white"
-              onClick={() => copyToClipboard(keyData.hash, "Message Hash")}
-              data-testid="button-copy-message-hash"
-            >
-              <Copy className="w-4 h-4" />
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            This hash proves the encrypted message is stored on the server.
-          </p>
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-4 pt-4">
         <Button 

@@ -3,6 +3,7 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import nacl from "tweetnacl";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -33,16 +34,53 @@ export async function registerRoutes(
       return res.status(404).json({ message: 'Capsule not found' });
     }
     
-    // Only return encrypted content; frontend is responsible for decryption
     const now = new Date();
     const revealDate = new Date(capsule.revealDate);
     const isRevealed = now >= revealDate;
 
-    res.json({
-      ...capsule,
-      // Don't expose any decrypted content - only signal to frontend if it's time to decrypt
-      isRevealed
-    });
+    if (isRevealed && capsule.decryptionKey) {
+      // Auto-decrypt if reveal time has passed
+      try {
+        const encryptedHex = capsule.encryptedContent;
+        const keyHex = capsule.decryptionKey;
+
+        // Convert hex strings back to bytes
+        const encryptedBytes = new Uint8Array(
+          encryptedHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+        );
+        const keyBytes = new Uint8Array(
+          keyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+        );
+
+        // Extract nonce and ciphertext
+        const nonce = encryptedBytes.slice(0, nacl.secretbox.nonceLength);
+        const ciphertext = encryptedBytes.slice(nacl.secretbox.nonceLength);
+
+        // Decrypt
+        const decrypted = nacl.secretbox.open(ciphertext, nonce, keyBytes);
+
+        if (!decrypted) {
+          return res.status(500).json({ message: 'Failed to decrypt message' });
+        }
+
+        const message = new TextDecoder().decode(decrypted);
+
+        res.json({
+          ...capsule,
+          isRevealed: true,
+          decryptedContent: message,
+        });
+      } catch (error) {
+        console.error('Decryption error:', error);
+        res.status(500).json({ message: 'Failed to decrypt message' });
+      }
+    } else {
+      // Not yet revealed - return encrypted content
+      res.json({
+        ...capsule,
+        isRevealed: false,
+      });
+    }
   });
 
   // --- Farcaster Frame Routes ---

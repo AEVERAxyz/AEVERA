@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -51,6 +51,7 @@ async function sha256(message: string): Promise<string> {
 export function CreateCapsuleForm({ onSuccess }: Props) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUtcTime, setCurrentUtcTime] = useState(new Date());
 
   const form = useForm<CreateCapsuleFormData>({
     resolver: zodResolver(createCapsuleFormSchema),
@@ -58,6 +59,14 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
       message: "",
     },
   });
+
+  // Update UTC time every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentUtcTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const onSubmit = async (data: CreateCapsuleFormData) => {
     try {
@@ -81,12 +90,13 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
       // Save encryption key to user (they can copy it from success screen)
       const keyHex = bytesToHex(encryptionKey);
 
-      // Send encrypted data to backend
+      // Send encrypted data + key to backend
       const response = await fetch("/api/capsules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           encryptedContent: encryptedHex,
+          decryptionKey: keyHex,
           messageHash: messageHash,
           revealDate: data.revealDate.toISOString(),
         }),
@@ -98,15 +108,6 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
       }
 
       const capsule = await response.json();
-
-      // Store encryption key in session storage temporarily for success screen
-      sessionStorage.setItem(
-        `capsule_${capsule.id}_key`,
-        JSON.stringify({
-          key: keyHex,
-          hash: messageHash,
-        })
-      );
 
       toast({
         title: "Success!",
@@ -191,10 +192,15 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
                   />
                 </div>
               </FormControl>
-              <FormDescription className="text-muted-foreground flex items-center gap-2 mt-2">
-                <Clock className="w-3 h-3 text-accent" />
-                All times are handled in UTC to ensure global synchronization.
-              </FormDescription>
+              <div className="space-y-2">
+                <div className="text-sm text-accent font-mono">
+                  Current UTC: {currentUtcTime.toUTCString()}
+                </div>
+                <FormDescription className="text-muted-foreground flex items-center gap-2">
+                  <Clock className="w-3 h-3 text-accent" />
+                  All times are handled in UTC to ensure global synchronization.
+                </FormDescription>
+              </div>
               <FormMessage />
             </FormItem>
           )}
