@@ -14,7 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, Rocket, Clock } from "lucide-react";
+import { Loader2, Rocket, Clock, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import nacl from "tweetnacl";
@@ -48,10 +48,16 @@ async function sha256(message: string): Promise<string> {
   return bytesToHex(new Uint8Array(hashBuffer));
 }
 
+// Format UTC time nicely
+function formatUTC(date: Date): string {
+  return date.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+}
+
 export function CreateCapsuleForm({ onSuccess }: Props) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUtcTime, setCurrentUtcTime] = useState(new Date());
+  const [selectedUtcTime, setSelectedUtcTime] = useState<Date | null>(null);
 
   const form = useForm<CreateCapsuleFormData>({
     resolver: zodResolver(createCapsuleFormSchema),
@@ -87,7 +93,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
       // Create SHA-256 hash of plaintext for verification
       const messageHash = await sha256(data.message);
 
-      // Save encryption key to user (they can copy it from success screen)
+      // Save encryption key
       const keyHex = bytesToHex(encryptionKey);
 
       // Send encrypted data + key to backend
@@ -128,9 +134,31 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
     }
   };
 
-  // Get minimum datetime (now)
-  const now = new Date();
-  const minDateTime = now.toISOString().slice(0, 16);
+  // Get minimum datetime in local time format (for the datetime-local input)
+  const getMinDateTime = () => {
+    const now = new Date();
+    // Add 1 minute buffer
+    now.setMinutes(now.getMinutes() + 1);
+    // Format for datetime-local (YYYY-MM-DDTHH:mm)
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  // Handle local time selection and convert to UTC
+  const handleDateChange = (localDateTimeString: string) => {
+    if (localDateTimeString) {
+      // Create date from local time string (browser interprets as local)
+      const localDate = new Date(localDateTimeString);
+      setSelectedUtcTime(localDate);
+      form.setValue('revealDate', localDate, { shouldValidate: true, shouldDirty: true });
+    } else {
+      setSelectedUtcTime(null);
+    }
+  };
 
   return (
     <Form {...form}>
@@ -168,37 +196,50 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           name="revealDate"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel className="text-lg font-medium text-primary/90">
-                Reveal Date & Time (UTC)
+              <FormLabel className="text-lg font-medium text-primary/90 flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Reveal Date & Time
               </FormLabel>
               <FormControl>
                 <div className="relative group">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
                   <Input
                     type="datetime-local"
-                    className="relative bg-black/50 border-white/10 h-14 rounded-xl focus:ring-0 focus:border-transparent text-base p-4 text-white [color-scheme:dark]"
+                    className="relative bg-black/50 border-white/10 h-14 rounded-xl focus:ring-0 focus:border-transparent text-base p-4 text-white datetime-input"
                     placeholder="Select date and time..."
-                    min={minDateTime}
-                    value={
-                      field.value ? field.value.toISOString().slice(0, 16) : ""
-                    }
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        const date = new Date(e.target.value + ":00Z");
-                        field.onChange(date);
-                      }
-                    }}
+                    min={getMinDateTime()}
+                    onChange={(e) => handleDateChange(e.target.value)}
                     data-testid="input-datetime-local"
                   />
                 </div>
               </FormControl>
-              <div className="space-y-2">
-                <div className="text-sm text-accent font-mono">
-                  Current UTC: {currentUtcTime.toUTCString()}
+              
+              {/* Live UTC Conversion Display */}
+              <div className="mt-3 space-y-3 p-4 rounded-xl bg-black/30 border border-white/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-accent" />
+                    Current UTC Time:
+                  </span>
+                  <span className="text-sm font-mono text-accent">
+                    {formatUTC(currentUtcTime)}
+                  </span>
                 </div>
-                <FormDescription className="text-muted-foreground flex items-center gap-2">
-                  <Clock className="w-3 h-3 text-accent" />
-                  All times are handled in UTC to ensure global synchronization.
+                
+                {selectedUtcTime && (
+                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                    <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-primary" />
+                      Reveal Time (UTC):
+                    </span>
+                    <span className="text-sm font-mono text-primary font-semibold">
+                      {formatUTC(selectedUtcTime)}
+                    </span>
+                  </div>
+                )}
+                
+                <FormDescription className="text-muted-foreground/80 text-xs pt-1">
+                  Pick your local time above. The capsule will reveal at the equivalent UTC time shown here.
                 </FormDescription>
               </div>
               <FormMessage />

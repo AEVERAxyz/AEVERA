@@ -1,8 +1,9 @@
 import { motion } from "framer-motion";
-import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
+import { Check, Copy, ExternalLink, Share2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { Link } from "wouter";
 
 interface Props {
   capsuleId: string;
@@ -13,8 +14,10 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
   const { toast } = useToast();
   const [hasCopied, setHasCopied] = useState(false);
 
-  // Construct the Frame URL
+  // Construct the Frame URL (for Farcaster sharing)
   const frameUrl = `${window.location.origin}/frame/${capsuleId}`;
+  // Construct the capsule view URL (for direct viewing)
+  const capsuleUrl = `${window.location.origin}/capsule/${capsuleId}`;
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -53,39 +56,49 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
       <div className="space-y-2">
         <h2 className="text-3xl font-display text-white">Capsule Sealed!</h2>
         <p className="text-muted-foreground">
-          Your message has been encrypted and stored safely. It will remain hidden until the reveal date.
+          Your message has been encrypted and stored safely. It will automatically reveal at the scheduled time.
         </p>
       </div>
 
-      {/* Frame URL */}
+      {/* Capsule Link */}
       <div className="bg-black/40 rounded-xl p-4 border border-white/5 space-y-2 text-left">
         <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Capsule Link</p>
         <div className="flex items-center gap-2 bg-black/60 p-3 rounded-lg border border-white/5">
-          <code className="text-sm text-primary flex-1 truncate font-mono">
-            {frameUrl}
+          <code className="text-sm text-primary flex-1 truncate font-mono" data-testid="text-capsule-url">
+            {capsuleUrl}
           </code>
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 hover:bg-white/10 text-muted-foreground hover:text-white"
-            onClick={() => copyToClipboard(frameUrl, "Frame URL")}
-            data-testid="button-copy-frame-url"
+            onClick={() => copyToClipboard(capsuleUrl, "Capsule Link")}
+            data-testid="button-copy-capsule-url"
           >
             {hasCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
           </Button>
         </div>
       </div>
 
+      {/* View Capsule Button */}
+      <Link href={`/capsule/${capsuleId}`}>
+        <Button 
+          variant="outline" 
+          className="w-full border-accent/30"
+          data-testid="button-view-capsule"
+        >
+          <Eye className="w-4 h-4 mr-2" />
+          View Your Capsule
+        </Button>
+      </Link>
 
       <div className="grid grid-cols-2 gap-4 pt-4">
         <Button 
           variant="outline" 
-          className="w-full border-primary/30 hover:bg-primary/10 hover:text-primary transition-colors"
+          className="w-full border-primary/30"
           onClick={shareOnWarpcast}
           data-testid="button-share-warpcast"
         >
           <Share2 className="w-4 h-4 mr-2" />
-          Share
+          Share on Warpcast
         </Button>
         
         <Button 
