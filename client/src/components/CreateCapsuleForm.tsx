@@ -1,0 +1,155 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertCapsuleSchema } from "@shared/schema";
+import type { CreateCapsuleInput } from "@shared/routes";
+import { useCreateCapsule } from "@/hooks/use-capsules";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { CalendarIcon, Loader2, Rocket, Clock } from "lucide-react";
+import { motion } from "framer-motion";
+
+interface Props {
+  onSuccess: (capsuleId: string) => void;
+}
+
+export function CreateCapsuleForm({ onSuccess }: Props) {
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  
+  const form = useForm<CreateCapsuleInput>({
+    resolver: zodResolver(insertCapsuleSchema),
+    defaultValues: {
+      content: "",
+    },
+  });
+
+  const createCapsule = useCreateCapsule();
+
+  const onSubmit = (data: CreateCapsuleInput) => {
+    createCapsule.mutate(data, {
+      onSuccess: (response) => {
+        onSuccess(response.id);
+      },
+    });
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <FormField
+          control={form.control}
+          name="content"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-lg font-medium text-primary/90">Message to the Future</FormLabel>
+              <FormControl>
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
+                  <Textarea
+                    placeholder="Write something meaningful..."
+                    className="relative bg-black/50 border-white/10 min-h-[160px] resize-none text-lg p-6 rounded-xl focus:ring-0 focus:border-transparent placeholder:text-muted-foreground/50"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormDescription className="text-muted-foreground flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                This message will be encrypted until the reveal date.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="revealDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel className="text-lg font-medium text-primary/90">Reveal Date</FormLabel>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <div className="relative group cursor-pointer">
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "relative w-full pl-3 text-left font-normal h-14 rounded-xl bg-black/50 border-white/10 hover:bg-white/5 hover:text-white transition-all",
+                          !field.value && "text-muted-foreground"
+                        )}
+                        onClick={() => setIsCalendarOpen(true)}
+                        type="button"
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP")
+                        ) : (
+                          <span>Pick a date...</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-5 w-5 opacity-50" />
+                      </Button>
+                    </div>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-secondary border-white/10 text-foreground" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value ? new Date(field.value) : undefined}
+                    onSelect={(date) => {
+                      field.onChange(date);
+                      setIsCalendarOpen(false);
+                    }}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                    className="rounded-xl border border-white/10 bg-black/90 p-4"
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormDescription className="text-muted-foreground flex items-center gap-2">
+                <Clock className="w-3 h-3 text-accent" />
+                Wait for the right moment.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Button
+            type="submit"
+            disabled={createCapsule.isPending}
+            className="w-full h-16 text-lg font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+          >
+            {createCapsule.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Encrypting Time Capsule...
+              </>
+            ) : (
+              <>
+                <Rocket className="mr-2 h-5 w-5" />
+                Seal Capsule
+              </>
+            )}
+          </Button>
+        </motion.div>
+      </form>
+    </Form>
+  );
+}

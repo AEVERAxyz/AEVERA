@@ -1,18 +1,23 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export const capsules = pgTable("capsules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  content: text("content").notNull(),
+  revealDate: timestamp("reveal_date").notNull(),
+  transactionHash: text("transaction_hash"),
+  isMinted: boolean("is_minted").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertCapsuleSchema = createInsertSchema(capsules).pick({
+  content: true,
+  revealDate: true,
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type InsertCapsule = z.infer<typeof insertCapsuleSchema>;
+export type Capsule = typeof capsules.$inferSelect;
+
+export type CreateCapsuleRequest = InsertCapsule;
+export type CapsuleResponse = Capsule;
