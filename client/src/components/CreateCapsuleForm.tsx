@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertCapsuleSchema } from "@shared/schema";
 import type { CreateCapsuleInput } from "@shared/routes";
 import { useCreateCapsule } from "@/hooks/use-capsules";
-import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
@@ -16,10 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { CalendarIcon, Loader2, Rocket, Clock } from "lucide-react";
+import { Loader2, Rocket, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -27,8 +23,6 @@ interface Props {
 }
 
 export function CreateCapsuleForm({ onSuccess }: Props) {
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  
   const form = useForm<CreateCapsuleInput>({
     resolver: zodResolver(insertCapsuleSchema),
     defaultValues: {
@@ -79,48 +73,28 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           name="revealDate"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel className="text-lg font-medium text-primary/90">Reveal Date</FormLabel>
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <div className="relative group cursor-pointer">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "relative w-full pl-3 text-left font-normal h-14 rounded-xl bg-black/50 border-white/10 hover:bg-white/5 hover:text-white transition-all",
-                          !field.value && "text-muted-foreground"
-                        )}
-                        onClick={() => setIsCalendarOpen(true)}
-                        type="button"
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date...</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-5 w-5 opacity-50" />
-                      </Button>
-                    </div>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-secondary border-white/10 text-foreground" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value ? new Date(field.value) : undefined}
-                    onSelect={(date) => {
-                      field.onChange(date);
-                      setIsCalendarOpen(false);
+              <FormLabel className="text-lg font-medium text-primary/90">Reveal Date & Time (UTC)</FormLabel>
+              <FormControl>
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
+                  <Input
+                    type="datetime-local"
+                    className="relative bg-black/50 border-white/10 h-14 rounded-xl focus:ring-0 focus:border-transparent text-base p-4"
+                    placeholder="Select date and time..."
+                    value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ""}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const date = new Date(e.target.value + ":00Z");
+                        field.onChange(date);
+                      }
                     }}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                    className="rounded-xl border border-white/10 bg-black/90 p-4"
+                    data-testid="input-datetime-local"
                   />
-                </PopoverContent>
-              </Popover>
-              <FormDescription className="text-muted-foreground flex items-center gap-2">
+                </div>
+              </FormControl>
+              <FormDescription className="text-muted-foreground flex items-center gap-2 mt-2">
                 <Clock className="w-3 h-3 text-accent" />
-                Wait for the right moment.
+                All times are handled in UTC to ensure global synchronization.
               </FormDescription>
               <FormMessage />
             </FormItem>
