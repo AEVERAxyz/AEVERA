@@ -12,11 +12,15 @@ export const capsules = pgTable("capsules", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertCapsuleSchema = createInsertSchema(capsules).pick({
-  encryptedContent: true,
-  messageHash: true,
-  revealDate: true,
-});
+export const insertCapsuleSchema = createInsertSchema(capsules)
+  .pick({
+    encryptedContent: true,
+    messageHash: true,
+    revealDate: true,
+  })
+  .extend({
+    revealDate: z.coerce.date(),
+  });
 
 export type InsertCapsule = z.infer<typeof insertCapsuleSchema>;
 export type Capsule = typeof capsules.$inferSelect;
