@@ -8,28 +8,31 @@
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Inter', sans-serif;
 
-  /* Base Blue Theme - Elegant Professional */
-  --background: 220 25% 6%;
-  --foreground: 210 40% 98%;
+  /* Midnight Base Blue Theme - Deep, Sophisticated */
+  --background: 220 30% 4%;
+  --foreground: 0 0% 88%;
   
-  --primary: 221 93% 51%;
-  --primary-foreground: 210 40% 98%;
+  /* Midnight Base Blue - deeper, more sophisticated */
+  --primary: 221 70% 35%;
+  --primary-foreground: 0 0% 88%;
   
-  --secondary: 220 20% 14%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 220 25% 12%;
+  --secondary-foreground: 0 0% 88%;
   
-  --muted: 220 20% 12%;
-  --muted-foreground: 220 10% 60%;
+  --muted: 220 20% 10%;
+  --muted-foreground: 220 10% 55%;
   
-  --accent: 210 100% 60%;
-  --accent-foreground: 220 25% 6%;
+  /* Azure accent - subtle complement */
+  --accent: 210 80% 45%;
+  --accent-foreground: 0 0% 88%;
   
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
+  /* Subtle orange for errors instead of aggressive red */
+  --destructive: 30 80% 50%;
+  --destructive-foreground: 30 90% 85%;
   
-  --border: 220 20% 18%;
-  --input: 220 20% 14%;
-  --ring: 221 93% 51%;
+  --border: 220 20% 15%;
+  --input: 220 20% 12%;
+  --ring: 221 70% 35%;
   
   --radius: 0.5rem;
 }
@@ -39,18 +42,20 @@
     @apply border-border;
   }
   body {
-    @apply text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
+    @apply antialiased;
     font-family: var(--font-body);
+    color: #E0E0E0;
     background-color: #050505;
     background-image: 
-      radial-gradient(circle at 15% 50%, rgba(22, 82, 240, 0.08), transparent 25%),
-      radial-gradient(circle at 85% 30%, rgba(22, 82, 240, 0.06), transparent 25%);
+      radial-gradient(circle at 15% 50%, rgba(30, 60, 140, 0.06), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(30, 60, 140, 0.04), transparent 25%);
     background-attachment: fixed;
   }
   
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     @apply tracking-tight font-bold;
+    color: #E0E0E0;
   }
 }
 
@@ -59,7 +64,7 @@
 }
 
 .glow-text {
-  text-shadow: 0 0 20px rgba(22, 82, 240, 0.5);
+  text-shadow: 0 0 30px rgba(30, 60, 140, 0.4);
 }
 
 /* Parchment/Scroll Card */
@@ -74,39 +79,39 @@
     0 0 40px rgba(251, 191, 36, 0.1);
 }
 
-/* DateTime Input White Icons */
+/* DateTime Input White Icons - Force bright */
 .datetime-input {
   color-scheme: dark;
 }
 .datetime-input::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  opacity: 0.8;
+  filter: invert(1) brightness(2) !important;
+  opacity: 1;
   cursor: pointer;
 }
 .datetime-input::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
 
-/* Base Blue Neon Glow Effects */
+/* Midnight Base Blue Neon Glow Effects - Subtle */
 .neon-glow {
   box-shadow: 
-    0 0 20px rgba(22, 82, 240, 0.4),
-    0 0 40px rgba(22, 82, 240, 0.2),
-    0 0 60px rgba(22, 82, 240, 0.1);
+    0 0 15px rgba(30, 60, 140, 0.3),
+    0 0 30px rgba(30, 60, 140, 0.15),
+    0 0 45px rgba(30, 60, 140, 0.08);
 }
 
 .neon-container {
   box-shadow: 
-    0 0 30px rgba(22, 82, 240, 0.12),
-    0 0 60px rgba(22, 82, 240, 0.06),
-    inset 0 0 30px rgba(22, 82, 240, 0.02);
+    0 0 20px rgba(30, 60, 140, 0.08),
+    0 0 40px rgba(30, 60, 140, 0.04),
+    inset 0 0 20px rgba(30, 60, 140, 0.01);
 }
 
 .neon-glow:hover {
   box-shadow: 
-    0 0 25px rgba(22, 82, 240, 0.5),
-    0 0 50px rgba(22, 82, 240, 0.3),
-    0 0 75px rgba(22, 82, 240, 0.15);
+    0 0 20px rgba(30, 60, 140, 0.4),
+    0 0 40px rgba(30, 60, 140, 0.2),
+    0 0 60px rgba(30, 60, 140, 0.1);
 }
 
 /* Custom Scrollbar */
@@ -118,4 +123,23 @@
 }
 ::-webkit-scrollbar-thumb {
   @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
+}
+
+/* Subtle Error Message Styling */
+.error-message {
+  @apply text-orange-400 border border-orange-400/30 rounded-lg px-3 py-2 text-sm bg-transparent;
+}
+
+/* Form error styling override */
+[data-slot="form-message"] {
+  color: #E89B5A !important;
+}
+
+/* Soft text utility */
+.text-soft {
+  color: #E0E0E0;
+}
+
+.text-soft-muted {
+  color: #A0A0A0;
 }

@@ -168,7 +168,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-lg font-medium text-primary/90">
+              <FormLabel className="text-lg font-medium text-primary/80">
                 Message to the Future
               </FormLabel>
               <FormControl>
@@ -196,7 +196,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           name="revealDate"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel className="text-lg font-medium text-primary/90 flex items-center gap-2">
+              <FormLabel className="text-lg font-medium text-primary/80 flex items-center gap-2">
                 <Clock className="w-5 h-5" />
                 Reveal Date & Time
               </FormLabel>

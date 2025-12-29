@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Check, Copy, ExternalLink, Share2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 
 interface Props {
@@ -10,14 +10,27 @@ interface Props {
   onReset: () => void;
 }
 
+interface CapsuleData {
+  id: string;
+  revealDate: string;
+  sealerIdentity?: string;
+  isRevealed?: boolean;
+}
+
 export function SuccessCard({ capsuleId, onReset }: Props) {
   const { toast } = useToast();
   const [hasCopied, setHasCopied] = useState(false);
+  const [capsuleData, setCapsuleData] = useState<CapsuleData | null>(null);
 
-  // Construct the Frame URL (for Farcaster sharing)
   const frameUrl = `${window.location.origin}/frame/${capsuleId}`;
-  // Construct the capsule view URL (for direct viewing)
   const capsuleUrl = `${window.location.origin}/capsule/${capsuleId}`;
+
+  useEffect(() => {
+    fetch(`/api/capsules/${capsuleId}`)
+      .then(res => res.json())
+      .then((data: CapsuleData) => setCapsuleData(data))
+      .catch(() => {});
+  }, [capsuleId]);
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -38,7 +51,11 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
   };
 
   const shareOnWarpcast = () => {
-    const text = encodeURIComponent("I just created a Time Capsule! Check it out:");
+    const isRevealed = capsuleData?.isRevealed ?? false;
+    const statusText = isRevealed 
+      ? "My Time Capsule has been REVEALED! Read my message:" 
+      : "I just sealed a Time Capsule! It's LOCKED until the reveal date:";
+    const text = encodeURIComponent(statusText);
     const url = encodeURIComponent(frameUrl);
     window.open(`https://warpcast.com/~/compose?text=${text}&embeds[]=${url}`, '_blank');
   };
@@ -54,19 +71,24 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
       </div>
 
       <div className="space-y-2">
-        <h2 className="text-3xl font-display text-white">Capsule Sealed!</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-3xl font-display text-soft">Capsule Sealed!</h2>
+        <p className="text-soft-muted">
           Your message has been encrypted and stored safely. It will automatically reveal at the scheduled time.
         </p>
       </div>
 
-      {/* Capsule Link */}
       <div className="bg-black/40 rounded-xl p-4 border border-white/5 space-y-2 text-left">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Capsule Link</p>
+        <p className="text-xs uppercase tracking-wider text-soft-muted font-semibold">Capsule Link</p>
         <div className="flex items-center gap-2 bg-black/60 p-3 rounded-lg border border-white/5">
-          <code className="text-sm text-primary flex-1 truncate font-mono" data-testid="text-capsule-url">
+          <a 
+            href={capsuleUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-primary flex-1 truncate font-mono hover:underline cursor-pointer"
+            data-testid="link-capsule-url"
+          >
             {capsuleUrl}
-          </code>
+          </a>
           <Button
             size="icon"
             variant="ghost"
@@ -78,7 +100,6 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
         </div>
       </div>
 
-      {/* View Capsule Button */}
       <Link href={`/capsule/${capsuleId}`}>
         <Button 
           variant="outline" 
@@ -102,7 +123,7 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
         </Button>
         
         <Button 
-          className="w-full bg-white text-black hover:bg-white/90"
+          className="w-full bg-white/90 text-black hover:bg-white/80"
           onClick={onReset}
           data-testid="button-create-another"
         >

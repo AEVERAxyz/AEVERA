@@ -5,18 +5,22 @@
 TimeCapsule is a web application that allows users to create encrypted time-locked messages that can only be revealed after a specified date. Users write a message, set a future reveal date, and the application encrypts the content client-side before storing it. When the reveal date passes, the message is automatically decrypted and displayed. The application supports sharing capsules via unique URLs and integration with Farcaster (Warpcast) for social sharing, with planned NFT minting functionality for revealed messages.
 
 ### Authentication
-- **Farcaster Sign-In**: Users authenticate via Neynar's Sign in with Farcaster popup flow
-- **Identity Selection**: After sign-in, users can choose to post as their @username or any verified address (ENS/.base.eth)
+- **Farcaster Sign-In**: Users authenticate via Neynar's Sign in with Farcaster popup flow (SIWN script v1.2.0)
+- **Coinbase Smart Wallet**: Alternative login option via @coinbase/wallet-sdk
+- **Identity Selection**: After sign-in, users can choose to post as their @username or any verified address (ENS/.base.eth names resolved via API)
 - **Environment Variables**: Requires `NEYNAR_API_KEY` (server) and `VITE_NEYNAR_CLIENT_ID` (client)
 
 ### Design Theme
-- **Color Scheme**: Base Blue (#1652F0) primary color with azure accents
-- **Background**: Charcoal (#050505) with subtle blue gradient orbs
-- **Effects**: Neon glow effects using Base Blue on buttons and containers
+- **Color Scheme**: Midnight Base Blue (HSL 221 70% 35%) - deep, sophisticated accent color
+- **Background**: Dark charcoal (#050505) with subtle blue gradient orbs
+- **Text Colors**: Soft white (#E0E0E0) for high contrast without harshness
+- **Error Messages**: Subtle orange (#E89B5A) with thin borders instead of aggressive red
+- **Effects**: Subtle neon glow effects using Midnight Base Blue on buttons and containers
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Creator attribution: gelassen.eth
 
 ## System Architecture
 
@@ -28,12 +32,21 @@ Preferred communication style: Simple, everyday language.
 - **UI Components**: shadcn/ui component library built on Radix UI primitives
 - **Animations**: Framer Motion for page transitions and interactions
 - **Build Tool**: Vite for development and production builds
+- **Wallet Integration**: @coinbase/wallet-sdk for Smart Wallet support
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js
 - **Language**: TypeScript with ESM modules
 - **API Design**: RESTful endpoints defined in shared route schemas with Zod validation
 - **Database ORM**: Drizzle ORM for type-safe database operations
+
+### API Endpoints
+- `POST /api/capsules` - Create a new time capsule
+- `GET /api/capsules/:id` - Get capsule details (auto-decrypts if revealed)
+- `GET /api/farcaster/user/:fid` - Fetch Farcaster user profile with verified addresses
+- `GET /api/resolve-ens/:address` - Resolve ENS or .base.eth name for an address
+- `GET /frame/:id` - Farcaster Frame HTML for sharing
+- `POST /frame/:id` - Farcaster Frame action handler
 
 ### Data Storage
 - **Database**: PostgreSQL accessed via Drizzle ORM
@@ -63,11 +76,14 @@ Preferred communication style: Simple, everyday language.
 
 ### Frontend Libraries
 - **@tanstack/react-query**: Async state management and caching
+- **@coinbase/wallet-sdk**: Coinbase Smart Wallet integration
 - **framer-motion**: Animation library
 - **tweetnacl**: Client-side encryption library
 - **react-hook-form + zod**: Form handling with schema validation
 - **date-fns**: Date manipulation and formatting
 - **lucide-react**: Icon library
+- **react-icons**: Company logos (SiFarcaster)
+- **viem**: Ethereum utilities
 
 ### UI Framework
 - **Radix UI**: Accessible component primitives (dialog, dropdown, tooltip, etc.)

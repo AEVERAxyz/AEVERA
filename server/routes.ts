@@ -83,6 +83,42 @@ export async function registerRoutes(
     }
   });
 
+  // --- ENS Resolution ---
+
+  app.get('/api/resolve-ens/:address', async (req, res) => {
+    const addressSchema = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
+    const result = addressSchema.safeParse(req.params.address);
+    
+    if (!result.success) {
+      return res.status(400).json({ message: 'Invalid address' });
+    }
+
+    const address = req.params.address.toLowerCase();
+    
+    try {
+      const response = await fetch(`https://api.ensideas.com/ens/resolve/${address}`);
+      if (response.ok) {
+        const data = await response.json() as { name?: string; displayName?: string };
+        if (data.name || data.displayName) {
+          return res.json({ ensName: data.name || data.displayName });
+        }
+      }
+      
+      const baseResponse = await fetch(`https://resolver-api.basename.app/reverse/${address}`);
+      if (baseResponse.ok) {
+        const baseData = await baseResponse.json() as { name?: string };
+        if (baseData.name) {
+          return res.json({ ensName: baseData.name });
+        }
+      }
+      
+      res.json({ ensName: null });
+    } catch (error) {
+      console.error('ENS resolution error:', error);
+      res.json({ ensName: null });
+    }
+  });
+
   // --- Farcaster User Lookup ---
 
   app.get('/api/farcaster/user/:fid', async (req, res) => {
