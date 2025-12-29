@@ -18,12 +18,12 @@ import { Loader2, Rocket, Clock, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import nacl from "tweetnacl";
+import { IdentityModule, type Identity } from "./IdentityModule";
 
 interface Props {
   onSuccess: (capsuleId: string) => void;
 }
 
-// Schema for form validation (plain text + reveal date)
 const createCapsuleFormSchema = z.object({
   message: z.string().min(1, "Message cannot be empty"),
   revealDate: z.coerce.date().refine(
@@ -34,7 +34,6 @@ const createCapsuleFormSchema = z.object({
 
 type CreateCapsuleFormData = z.infer<typeof createCapsuleFormSchema>;
 
-// Helper functions for encryption
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -48,7 +47,6 @@ async function sha256(message: string): Promise<string> {
   return bytesToHex(new Uint8Array(hashBuffer));
 }
 
-// Format UTC time nicely
 function formatUTC(date: Date): string {
   return date.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 }
@@ -56,8 +54,8 @@ function formatUTC(date: Date): string {
 export function CreateCapsuleForm({ onSuccess }: Props) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentUtcTime, setCurrentUtcTime] = useState(new Date());
   const [selectedUtcTime, setSelectedUtcTime] = useState<Date | null>(null);
+  const [identity, setIdentity] = useState<Identity | null>(null);
 
   const form = useForm<CreateCapsuleFormData>({
     resolver: zodResolver(createCapsuleFormSchema),
@@ -66,46 +64,49 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
     },
   });
 
-  // Update UTC time every second
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentUtcTime(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
   const onSubmit = async (data: CreateCapsuleFormData) => {
+    if (!identity || identity.type === "anonymous") {
+      toast({
+        title: "Identity Required",
+        description: "Please connect your wallet to seal the capsule.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
-      // Client-side encryption with TweetNaCl
       const encryptionKey = nacl.randomBytes(nacl.secretbox.keyLength);
       const nonce = nacl.randomBytes(nacl.secretbox.nonceLength);
       const messageBytes = new TextEncoder().encode(data.message);
       const encryptedBox = nacl.secretbox(messageBytes, nonce, encryptionKey);
 
-      // Combine nonce + encrypted content
       const combined = new Uint8Array(nonce.length + encryptedBox.length);
       combined.set(nonce);
       combined.set(encryptedBox, nonce.length);
       const encryptedHex = bytesToHex(combined);
 
-      // Create SHA-256 hash of plaintext for verification
       const messageHash = await sha256(data.message);
-
-      // Save encryption key
       const keyHex = bytesToHex(encryptionKey);
 
-      // Send encrypted data + key to backend
-      const response = await fetch("/api/capsules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const payload: Record<string, string> = {
           encryptedContent: encryptedHex,
           decryptionKey: keyHex,
           messageHash: messageHash,
           revealDate: data.revealDate.toISOString(),
-        }),
+          sealerIdentity: identity.displayName,
+          sealerType: identity.type,
+        };
+      
+      if (identity.address) {
+        payload.sealerAddress = identity.address;
+      }
+
+      const response = await fetch("/api/capsules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -134,12 +135,9 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
     }
   };
 
-  // Get minimum datetime in local time format (for the datetime-local input)
   const getMinDateTime = () => {
     const now = new Date();
-    // Add 1 minute buffer
     now.setMinutes(now.getMinutes() + 1);
-    // Format for datetime-local (YYYY-MM-DDTHH:mm)
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -148,10 +146,8 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  // Handle local time selection and convert to UTC
   const handleDateChange = (localDateTimeString: string) => {
     if (localDateTimeString) {
-      // Create date from local time string (browser interprets as local)
       const localDate = new Date(localDateTimeString);
       setSelectedUtcTime(localDate);
       form.setValue('revealDate', localDate, { shouldValidate: true, shouldDirty: true });
@@ -160,9 +156,13 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
     }
   };
 
+  const canSubmit = identity && identity.type !== "anonymous" && form.formState.isDirty;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <IdentityModule identity={identity} onIdentityChange={setIdentity} />
+
         <FormField
           control={form.control}
           name="message"
@@ -214,34 +214,22 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
                 </div>
               </FormControl>
               
-              {/* Live UTC Conversion Display */}
-              <div className="mt-3 space-y-3 p-4 rounded-xl bg-black/30 border border-white/5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-accent" />
-                    Current UTC Time:
-                  </span>
-                  <span className="text-sm font-mono text-accent">
-                    {formatUTC(currentUtcTime)}
-                  </span>
-                </div>
-                
-                {selectedUtcTime && (
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5">
+              {selectedUtcTime && (
+                <div className="mt-3 p-4 rounded-xl bg-black/30 border border-white/5">
+                  <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-primary" />
+                      <Globe className="w-4 h-4 text-accent" />
                       Reveal Time (UTC):
                     </span>
                     <span className="text-sm font-mono text-primary font-semibold">
                       {formatUTC(selectedUtcTime)}
                     </span>
                   </div>
-                )}
-                
-                <FormDescription className="text-muted-foreground/80 text-xs pt-1">
-                  Pick your local time above. The capsule will reveal at the equivalent UTC time shown here.
-                </FormDescription>
-              </div>
+                  <p className="text-muted-foreground/70 text-xs mt-2">
+                    The capsule will reveal at this UTC time worldwide.
+                  </p>
+                </div>
+              )}
               <FormMessage />
             </FormItem>
           )}
@@ -253,8 +241,8 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
         >
           <Button
             type="submit"
-            disabled={isSubmitting || !form.formState.isDirty}
-            className="w-full h-16 text-lg font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+            disabled={isSubmitting || !canSubmit}
+            className="w-full h-16 text-lg font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all neon-glow"
             data-testid="button-seal-capsule"
           >
             {isSubmitting ? (
@@ -270,6 +258,12 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
             )}
           </Button>
         </motion.div>
+
+        {!canSubmit && identity?.type === "anonymous" && (
+          <p className="text-center text-sm text-muted-foreground">
+            Connect your wallet above to seal your capsule.
+          </p>
+        )}
       </form>
     </Form>
   );

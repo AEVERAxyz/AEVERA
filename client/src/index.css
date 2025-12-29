@@ -39,11 +39,12 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
+    @apply text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
     font-family: var(--font-body);
+    background-color: #050505;
     background-image: 
-      radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.15), transparent 25%),
-      radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.15), transparent 25%);
+      radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.12), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.12), transparent 25%);
     background-attachment: fixed;
   }
   
@@ -84,6 +85,28 @@
 }
 .datetime-input::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
+}
+
+/* Neon Glow Effects */
+.neon-glow {
+  box-shadow: 
+    0 0 20px rgba(139, 92, 246, 0.4),
+    0 0 40px rgba(139, 92, 246, 0.2),
+    0 0 60px rgba(56, 189, 248, 0.1);
+}
+
+.neon-container {
+  box-shadow: 
+    0 0 30px rgba(139, 92, 246, 0.15),
+    0 0 60px rgba(139, 92, 246, 0.08),
+    inset 0 0 30px rgba(139, 92, 246, 0.03);
+}
+
+.neon-glow:hover {
+  box-shadow: 
+    0 0 25px rgba(139, 92, 246, 0.5),
+    0 0 50px rgba(139, 92, 246, 0.3),
+    0 0 75px rgba(56, 189, 248, 0.15);
 }
 
 /* Custom Scrollbar */

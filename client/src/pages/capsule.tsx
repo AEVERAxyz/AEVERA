@@ -16,6 +16,9 @@ interface CapsuleData {
   isMinted: boolean;
   transactionHash?: string;
   createdAt: string;
+  sealerIdentity?: string;
+  sealerType?: string;
+  sealerAddress?: string;
 }
 
 interface Props {
@@ -88,7 +91,7 @@ function CountdownTimer({ targetDate }: { targetDate: Date }) {
   );
 }
 
-function RevealedMessage({ message }: { message: string }) {
+function RevealedMessage({ message, sealerIdentity }: { message: string; sealerIdentity?: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -117,7 +120,9 @@ function RevealedMessage({ message }: { message: string }) {
             </div>
             <div>
               <h3 className="text-lg font-display font-bold text-amber-100">Message Revealed</h3>
-              <p className="text-sm text-amber-200/60">The time has come...</p>
+              {sealerIdentity && (
+                <p className="text-sm text-amber-200/60" data-testid="text-revealed-sealer">From: {sealerIdentity}</p>
+              )}
             </div>
           </div>
           
@@ -174,8 +179,26 @@ export default function CapsulePage({ id }: Props) {
     }
   };
 
+  const getTimeUntilReveal = () => {
+    if (!capsule) return "";
+    const revealDate = new Date(capsule.revealDate);
+    const now = new Date();
+    const diff = revealDate.getTime() - now.getTime();
+    if (diff <= 0) return "Now";
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) return `${days}d ${hours}h`;
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${mins}m`;
+  };
+
   const shareOnWarpcast = () => {
-    const text = encodeURIComponent("Check out this Time Capsule!");
+    const identity = capsule?.sealerIdentity || "Someone";
+    const timeUntil = getTimeUntilReveal();
+    const shareText = capsule?.isRevealed
+      ? `${identity} sent a message to the future - and it has been revealed! Check it out on TimeCapsule.`
+      : `${identity} has sent a message to the future! Reveal in ${timeUntil}. Seal your own prophecy on TimeCapsule.`;
+    const text = encodeURIComponent(shareText);
     const url = encodeURIComponent(frameUrl);
     window.open(`https://warpcast.com/~/compose?text=${text}&embeds[]=${url}`, '_blank');
   };
@@ -252,7 +275,7 @@ export default function CapsulePage({ id }: Props) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="glass-card rounded-3xl p-6 md:p-10 border border-white/10 shadow-2xl relative overflow-hidden"
+          className="glass-card rounded-3xl p-6 md:p-10 border border-white/10 shadow-2xl relative overflow-hidden neon-container"
         >
           {/* Decorative gradient border effect */}
           <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isRevealed ? 'from-transparent via-amber-400 to-transparent' : 'from-transparent via-primary to-transparent'} opacity-50`}></div>
@@ -260,7 +283,10 @@ export default function CapsulePage({ id }: Props) {
           {isRevealed ? (
             /* REVEALED STATE */
             <div className="space-y-8">
-              <RevealedMessage message={capsule.decryptedContent || "Message could not be decrypted."} />
+              <RevealedMessage 
+                message={capsule.decryptedContent || "Message could not be decrypted."} 
+                sealerIdentity={capsule.sealerIdentity}
+              />
               
               {/* NFT Mint Button */}
               <div className="pt-6 border-t border-white/10">
@@ -280,6 +306,14 @@ export default function CapsulePage({ id }: Props) {
           ) : (
             /* LOCKED STATE */
             <div className="space-y-8">
+              {capsule.sealerIdentity && (
+                <div className="text-center pb-4 border-b border-white/10">
+                  <p className="text-sm text-muted-foreground mb-1">Sealed by</p>
+                  <p className="text-lg font-display font-bold text-primary" data-testid="text-sealer-identity">
+                    {capsule.sealerIdentity}
+                  </p>
+                </div>
+              )}
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6 ring-2 ring-primary/30">
                   <Lock className="w-10 h-10 text-primary" />

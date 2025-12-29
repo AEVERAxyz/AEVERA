@@ -105,9 +105,28 @@ export async function registerRoutes(
     const revealDate = new Date(capsule.revealDate);
     const isRevealed = now >= revealDate;
 
+    const sealerIdentity = capsule.sealerIdentity || "Someone";
+    const timeUntilReveal = (() => {
+      const diff = revealDate.getTime() - now.getTime();
+      if (diff <= 0) return "Now";
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      if (days > 0) return `${days}d ${hours}h`;
+      return `${hours}h ${mins}m`;
+    })();
+
     const imageUrl = isRevealed 
       ? `https://placehold.co/1200x630?text=TimeCapsule+REVEALED`
       : `https://placehold.co/1200x630?text=TimeCapsule+LOCKED`;
+
+    const ogTitle = isRevealed 
+      ? `${sealerIdentity}'s message has been revealed!`
+      : `${sealerIdentity} has sent a message to the future!`;
+    
+    const ogDescription = isRevealed
+      ? `A time capsule message was revealed. Read it on TimeCapsule.`
+      : `Reveal in ${timeUntilReveal}. Seal your own prophecy on TimeCapsule.`;
 
     // Proper Farcaster Frame spec (vNext)
     const html = `
@@ -115,10 +134,10 @@ export async function registerRoutes(
       <html>
         <head>
           <meta charset="utf-8">
-          <title>TimeCapsule - Farcaster Frame</title>
+          <title>${ogTitle}</title>
           <!-- Open Graph -->
-          <meta property="og:title" content="TimeCapsule" />
-          <meta property="og:description" content="A time-locked message revealed on Base" />
+          <meta property="og:title" content="${ogTitle}" />
+          <meta property="og:description" content="${ogDescription}" />
           <meta property="og:image" content="${imageUrl}" />
           <meta property="og:url" content="${baseUrl}/frame/${capsule.id}" />
           
