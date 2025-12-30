@@ -28,30 +28,32 @@ export default function Home() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center justify-center mb-5">
-            <img 
-              src={logoImage} 
-              alt="TimeCapsule Logo" 
-              className="h-[160px] w-auto"
-              style={{ filter: "drop-shadow(0 0 20px rgba(22, 82, 240, 0.6))" }}
-              data-testid="img-logo"
-            />
+          <div className="flex flex-col items-center max-w-md mx-auto">
+            <div className="inline-flex items-center justify-center mb-[10px]">
+              <img 
+                src={logoImage} 
+                alt="TimeCapsule Logo" 
+                className="h-[160px] w-auto"
+                style={{ filter: "drop-shadow(0 0 20px rgba(22, 82, 240, 0.6))" }}
+                data-testid="img-logo"
+              />
+            </div>
+            <h1 
+              className="text-3xl md:text-4xl font-sans font-extrabold mb-3 text-[#F8FAFC]"
+              style={{ letterSpacing: "-0.04em" }}
+            >
+              TimeCapsule
+            </h1>
+            <p className="text-sm text-[#64748B] font-light mb-1">
+              Send a message to the future.
+            </p>
+            <p 
+              className="text-xs font-light"
+              style={{ color: "rgba(22, 82, 240, 0.7)" }}
+            >
+              Mint it as an NFT when revealed.
+            </p>
           </div>
-          <h1 
-            className="text-4xl md:text-5xl font-sans font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-br from-[#E0E0E0] via-[#C0C0C0] to-[#808080] glow-text"
-            style={{ letterSpacing: "-0.04em" }}
-          >
-            TimeCapsule
-          </h1>
-          <p className="text-lg text-[#94A3B8] font-light max-w-lg mx-auto mb-1">
-            Send a message to the future.
-          </p>
-          <p 
-            className="text-sm text-[#60A5FA] font-light max-w-lg mx-auto"
-            style={{ textShadow: "0 0 8px rgba(96, 165, 250, 0.4)" }}
-          >
-            Mint it as an NFT when revealed.
-          </p>
         </motion.div>
 
         <motion.div
