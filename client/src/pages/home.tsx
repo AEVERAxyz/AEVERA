@@ -4,7 +4,7 @@ import { CreateCapsuleForm } from "@/components/CreateCapsuleForm";
 import { SuccessCard } from "@/components/SuccessCard";
 import { ArchiveTable } from "@/components/ArchiveTable";
 import { motion } from "framer-motion";
-import logoImage from "@assets/FutureCapsule_1767061539197.jpg";
+import logoImage from "@assets/logo_final_1767063482143.png";
 
 export default function Home() {
   const [createdCapsuleId, setCreatedCapsuleId] = useState<string | null>(null);
@@ -32,7 +32,8 @@ export default function Home() {
             <img 
               src={logoImage} 
               alt="TimeCapsule Logo" 
-              className="h-[80px] w-auto"
+              className="h-[60px] w-auto"
+              style={{ filter: "drop-shadow(0 0 10px #1652F0)" }}
               data-testid="img-logo"
             />
           </div>

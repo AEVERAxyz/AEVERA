@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Lock, Unlock, Clock, ExternalLink, Sparkles, Copy, Check, Share2, Loader2 } from "lucide-react";
-import logoImage from "@assets/FutureCapsule_1767061539197.jpg";
+import logoImage from "@assets/logo_final_1767063482143.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -505,7 +505,8 @@ export default function CapsulePage({ id }: Props) {
               <img 
                 src={logoImage} 
                 alt="TimeCapsule Logo" 
-                className="h-[80px] w-auto"
+                className="h-[60px] w-auto"
+                style={{ filter: "drop-shadow(0 0 10px #1652F0)" }}
                 data-testid="img-logo"
               />
             </div>
