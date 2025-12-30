@@ -259,7 +259,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
                 <img 
                   src={bottleIcon} 
                   alt="" 
-                  className="mr-2 h-6 w-6"
+                  className="mr-2 h-9 w-9"
                   style={{ transform: "rotate(45deg)" }}
                 />
                 Seal Capsule

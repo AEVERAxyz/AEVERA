@@ -382,36 +382,82 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
   }
 
   if (walletAddress) {
+    const walletIdentityOptions = [
+      { value: "address", label: walletEns || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` },
+    ];
+    if (walletEns) {
+      walletIdentityOptions.push({ value: "short", label: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` });
+    }
+    
     return (
       <div className="relative group">
         <div className="absolute -inset-0.5 bg-gradient-to-r from-[#0052FF]/20 to-[#1652F0]/20 rounded-xl blur opacity-20"></div>
         <div className="relative bg-black/50 border border-[#1652F0]/30 rounded-xl p-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#0052FF] flex items-center justify-center">
-                <BaseLogo className="w-6 h-6" />
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-full bg-[#0052FF] flex items-center justify-center">
+                    <BaseLogo className="w-6 h-6" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#0052FF] rounded-full flex items-center justify-center border-2 border-black">
+                    <BaseLogo className="w-3 h-3" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-[#CBD5E1] uppercase tracking-wider flex items-center gap-1">
+                    <BaseLogo className="w-3 h-3" />
+                    Signed in as
+                  </p>
+                  <p className="text-lg font-display font-bold text-[#F8FAFC]" data-testid="text-identity">
+                    {walletEns || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-[#CBD5E1] uppercase tracking-wider flex items-center gap-1">
-                  <BaseLogo className="w-3 h-3" />
-                  Signed in as
-                </p>
-                <p className="text-lg font-display font-bold text-[#F8FAFC]" data-testid="text-identity">
-                  {walletEns || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}
-                </p>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDisconnect}
+                  className="text-soft-muted hover:text-soft"
+                  data-testid="button-disconnect"
+                >
+                  Disconnect
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDisconnect}
-                className="text-soft-muted hover:text-soft"
-                data-testid="button-disconnect"
+            
+            {/* Post As dropdown for Base Wallet */}
+            <div className="border-t border-[#1652F0]/30 pt-4">
+              <label className="text-sm text-[#1652F0] mb-2 block font-medium">Post as:</label>
+              <Select 
+                value="address" 
+                onValueChange={(val) => {
+                  const displayName = val === "address" 
+                    ? (walletEns || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`)
+                    : `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+                  onIdentityChange({
+                    type: "wallet",
+                    displayName,
+                    address: walletAddress,
+                  });
+                }}
               >
-                Disconnect
-              </Button>
+                <SelectTrigger 
+                  className="w-full bg-black/30 border-[#1652F0]/30 text-[#F8FAFC]"
+                  data-testid="select-wallet-identity"
+                >
+                  <SelectValue placeholder="Select identity" />
+                </SelectTrigger>
+                <SelectContent className="bg-black/90 border-[#1652F0]/30">
+                  {walletIdentityOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} data-testid={`select-item-${opt.value}`}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>

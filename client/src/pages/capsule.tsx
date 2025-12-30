@@ -101,14 +101,15 @@ interface RevealedMessageProps {
   revealedAt?: string;
 }
 
-function formatGermanDateTime(dateStr: string): string {
+function formatEnglishDateTime(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('de-DE', { 
-    day: '2-digit', 
-    month: '2-digit', 
+  return date.toLocaleDateString('en-US', { 
+    month: 'short',
+    day: 'numeric', 
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: true
   });
 }
 
@@ -120,39 +121,39 @@ function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt }: Reve
       transition={{ duration: 0.5 }}
       className="relative"
     >
-      {/* Parchment/Scroll Effect */}
-      <div className="absolute -inset-2 bg-gradient-to-br from-amber-500/20 via-yellow-500/10 to-amber-600/20 rounded-2xl blur-xl"></div>
-      <div className="relative parchment-card rounded-2xl p-8 md:p-12 overflow-hidden">
-        {/* Decorative corners */}
-        <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-amber-400/30 rounded-tl-2xl"></div>
-        <div className="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 border-amber-400/30 rounded-tr-2xl"></div>
-        <div className="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 border-amber-400/30 rounded-bl-2xl"></div>
-        <div className="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-amber-400/30 rounded-br-2xl"></div>
+      {/* Base Blue Glow Effect */}
+      <div className="absolute -inset-2 bg-gradient-to-br from-[#1652F0]/30 via-[#3B82F6]/20 to-[#1652F0]/30 rounded-2xl blur-xl"></div>
+      <div className="relative bg-black/60 border border-[#1652F0]/40 rounded-2xl p-8 md:p-12 overflow-hidden">
+        {/* Decorative corners with Base Blue */}
+        <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-[#1652F0]/40 rounded-tl-2xl"></div>
+        <div className="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 border-[#1652F0]/40 rounded-tr-2xl"></div>
+        <div className="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 border-[#1652F0]/40 rounded-bl-2xl"></div>
+        <div className="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-[#1652F0]/40 rounded-br-2xl"></div>
         
-        {/* Sparkle decorations */}
-        <Sparkles className="absolute top-4 right-4 w-5 h-5 text-amber-400/50 animate-pulse" />
-        <Sparkles className="absolute bottom-4 left-4 w-4 h-4 text-amber-400/40 animate-pulse" style={{ animationDelay: '0.5s' }} />
+        {/* Sparkle decorations with Base Blue */}
+        <Sparkles className="absolute top-4 right-4 w-5 h-5 text-[#1652F0]/60 animate-pulse" />
+        <Sparkles className="absolute bottom-4 left-4 w-4 h-4 text-[#1652F0]/50 animate-pulse" style={{ animationDelay: '0.5s' }} />
         
         {/* Message content */}
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center">
-              <Unlock className="w-5 h-5 text-black" />
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1652F0] to-[#3B82F6] flex items-center justify-center" style={{ boxShadow: "0 0 15px rgba(22, 82, 240, 0.5)" }}>
+              <Unlock className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-display font-bold text-amber-100">Message Revealed</h3>
+              <h3 className="text-lg font-display font-bold text-[#F8FAFC]">Message Revealed</h3>
             </div>
           </div>
           
-          {/* Contextual header with German format */}
+          {/* Contextual header with English format */}
           {sealerIdentity && sealedAt && revealedAt && (
-            <p className="text-sm text-amber-200/70 mb-4 italic" data-testid="text-revealed-context">
-              {sealerIdentity} hat am {formatGermanDateTime(sealedAt)} für {formatGermanDateTime(revealedAt)} geschrieben:
+            <p className="text-sm text-[#1652F0]/70 mb-4 italic" data-testid="text-revealed-context">
+              {sealerIdentity} wrote on {formatEnglishDateTime(sealedAt)} for {formatEnglishDateTime(revealedAt)}:
             </p>
           )}
           
           <div className="prose prose-invert max-w-none">
-            <p className="text-lg md:text-xl leading-relaxed text-amber-50/90 font-light whitespace-pre-wrap">
+            <p className="text-lg md:text-xl leading-relaxed text-[#F8FAFC]/90 font-light whitespace-pre-wrap">
               {message}
             </p>
           </div>
@@ -311,13 +312,14 @@ function ZoraMintSection({ capsule, currentUserAddress, onMintSuccess }: ZoraMin
   }
 
   return (
-    <div className="pt-6 border-t border-white/10 space-y-4">
+    <div className="pt-6 border-t border-[#1652F0]/30 space-y-4">
       {!showTxInput ? (
         <>
           <Button
             onClick={handleMintOnZora}
             disabled={isMinting}
-            className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+            className="w-full h-14 text-lg font-bold rounded-xl bg-[#6366F1] hover:bg-[#5558E3] text-white"
+            style={{ boxShadow: "0 0 20px rgba(99, 102, 241, 0.4)" }}
             data-testid="button-mint-nft"
           >
             {isMinting ? (
@@ -327,7 +329,9 @@ function ZoraMintSection({ capsule, currentUserAddress, onMintSuccess }: ZoraMin
               </>
             ) : (
               <>
-                <Sparkles className="mr-2 h-5 w-5" />
+                <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
                 Mint on Zora
               </>
             )}
@@ -426,7 +430,7 @@ export default function CapsulePage({ id }: Props) {
     refetchInterval: 30000,
   });
 
-  const frameUrl = `${window.location.origin}/frame/${id}`;
+  const capsuleUrl = `${window.location.origin}/capsule/${id}`;
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -466,7 +470,7 @@ export default function CapsulePage({ id }: Props) {
       ? `${identity} sent a message to the future - and it has been revealed! Check it out on TimeCapsule.`
       : `${identity} has sent a message to the future! Reveal in ${timeUntil}. Seal your own prophecy on TimeCapsule.`;
     const text = encodeURIComponent(shareText);
-    const url = encodeURIComponent(frameUrl);
+    const url = encodeURIComponent(capsuleUrl);
     window.open(`https://warpcast.com/~/compose?text=${text}&embeds[]=${url}`, '_blank');
   };
 
@@ -547,7 +551,7 @@ export default function CapsulePage({ id }: Props) {
           className="glass-card rounded-3xl p-6 md:p-10 relative overflow-visible"
         >
           {/* Decorative gradient border effect */}
-          <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isRevealed ? 'from-transparent via-amber-400 to-transparent' : 'from-transparent via-primary to-transparent'} opacity-50`}></div>
+          <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isRevealed ? 'from-transparent via-[#1652F0] to-transparent' : 'from-transparent via-primary to-transparent'} opacity-50`}></div>
 
           {isRevealed ? (
             /* REVEALED STATE */
@@ -615,18 +619,18 @@ export default function CapsulePage({ id }: Props) {
               <p className="text-xs uppercase tracking-wider text-[#1652F0] font-semibold mb-2">Share Link</p>
               <div className="flex items-center gap-2 bg-black/60 p-3 rounded-lg border border-[#1652F0]/20">
                 <a 
-                  href={frameUrl}
+                  href={capsuleUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm text-[#1652F0] flex-1 truncate font-mono hover:underline"
                   data-testid="text-capsule-url"
                 >
-                  {frameUrl}
+                  {capsuleUrl}
                 </a>
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => copyToClipboard(frameUrl, "Link")}
+                  onClick={() => copyToClipboard(capsuleUrl, "Link")}
                   data-testid="button-copy-link"
                 >
                   {hasCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}

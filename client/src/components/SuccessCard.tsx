@@ -22,7 +22,6 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
   const [hasCopied, setHasCopied] = useState(false);
   const [capsuleData, setCapsuleData] = useState<CapsuleData | null>(null);
 
-  const frameUrl = `${window.location.origin}/frame/${capsuleId}`;
   const capsuleUrl = `${window.location.origin}/capsule/${capsuleId}`;
 
   useEffect(() => {
@@ -56,7 +55,7 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
       ? "My Time Capsule has been REVEALED! Read my message:" 
       : "I just sealed a Time Capsule! It's LOCKED until the reveal date:";
     const text = encodeURIComponent(statusText);
-    const url = encodeURIComponent(frameUrl);
+    const url = encodeURIComponent(capsuleUrl);
     window.open(`https://warpcast.com/~/compose?text=${text}&embeds[]=${url}`, '_blank');
   };
 

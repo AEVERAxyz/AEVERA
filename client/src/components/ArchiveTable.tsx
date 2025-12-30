@@ -161,16 +161,20 @@ export function ArchiveTable() {
                         </Badge>
                       )}
                     </td>
-                    <td className="py-3 px-2">
+                    <td className="py-3 px-2" onClick={(e) => e.stopPropagation()}>
                       {item.isMinted && item.transactionHash ? (
                         <a
                           href={`https://zora.co/collect/base:${item.transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[#1652F0] hover:underline text-sm"
+                          className="inline-flex items-center gap-1 text-[#6366F1] hover:underline text-sm font-medium"
+                          style={{ textShadow: "0 0 8px rgba(99, 102, 241, 0.4)" }}
                           data-testid={`link-nft-${item.id}`}
                         >
-                          View <ExternalLink className="w-3 h-3" />
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                          </svg>
+                          View NFT <ExternalLink className="w-3 h-3" />
                         </a>
                       ) : item.status === "revealed" ? (
                         <span className="text-xs text-[#CBD5E1]/60">
