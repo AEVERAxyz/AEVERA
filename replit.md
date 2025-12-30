@@ -52,10 +52,16 @@ Creator attribution: gelassen.eth
 - `POST /frame/:id` - Farcaster Frame action handler
 
 ### Features
-- **Transparency Archive**: Live table showing all capsules with search by address/ENS
+- **Transparency Archive**: Live table showing all capsules with search by address/ENS, NFT links styled with Zora purple (#6366F1)
 - **Global Counter**: Footer displays total messages sent to the future
-- **Zora NFT Minting**: Author-only minting with provenance metadata (platform, author, dates, hash)
-- **Premium Parchment Effect**: Revealed messages display with decorative scroll styling
+- **Zora NFT Minting**: Author-only minting with provenance metadata, Zora-Purple button (#6366F1) with custom logo
+- **Base Blue Glow Theme**: Revealed messages display with decorative blue corners and glow effects using #1652F0
+
+### Design Choices
+- **Share URLs**: All user-facing share links use `/capsule/[ID]` route (frame route only serves metadata for Farcaster)
+- **Reveal Message Format**: English date format using 'en-US' locale with "MMM d, yyyy h:mm a" pattern
+- **Unified ProfileCard**: Both Base Wallet and Farcaster users get identical ProfileCard with service badges and "Post As" dropdown
+- **Bottle Icon**: Seal button displays bottle-logo at h-9 w-9 size, rotated 45 degrees
 
 ### Data Storage
 - **Database**: PostgreSQL accessed via Drizzle ORM
