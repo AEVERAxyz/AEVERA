@@ -501,12 +501,12 @@ export default function CapsulePage({ id }: Props) {
           className="text-center mb-10"
         >
           <Link href="/">
-            <div className="inline-flex items-center justify-center mb-6 cursor-pointer">
+            <div className="inline-flex items-center justify-center mb-10 cursor-pointer">
               <img 
                 src={logoImage} 
                 alt="TimeCapsule Logo" 
-                className="h-[60px] w-auto"
-                style={{ filter: "drop-shadow(0 0 10px #1652F0)" }}
+                className="h-[160px] w-auto"
+                style={{ filter: "drop-shadow(0 0 20px rgba(22, 82, 240, 0.6))" }}
                 data-testid="img-logo"
               />
             </div>

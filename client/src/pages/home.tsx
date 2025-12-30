@@ -28,12 +28,12 @@ export default function Home() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center justify-center mb-6">
+          <div className="inline-flex items-center justify-center mb-10">
             <img 
               src={logoImage} 
               alt="TimeCapsule Logo" 
-              className="h-[60px] w-auto"
-              style={{ filter: "drop-shadow(0 0 10px #1652F0)" }}
+              className="h-[160px] w-auto"
+              style={{ filter: "drop-shadow(0 0 20px rgba(22, 82, 240, 0.6))" }}
               data-testid="img-logo"
             />
           </div>
