@@ -203,14 +203,16 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
               <FormControl>
                 <div className="relative group">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
-                  <Input
-                    type="datetime-local"
-                    className="relative bg-black/50 border-white/10 h-14 rounded-xl focus:ring-0 focus:border-transparent text-base p-4 text-white datetime-input"
-                    placeholder="Select date and time..."
-                    min={getMinDateTime()}
-                    onChange={(e) => handleDateChange(e.target.value)}
-                    data-testid="input-datetime-local"
-                  />
+                  <div className="datetime-wrapper">
+                    <Input
+                      type="datetime-local"
+                      className="relative bg-black/50 border-white/10 h-14 rounded-xl focus:ring-0 focus:border-transparent text-base p-4 pr-12 text-white datetime-input"
+                      placeholder="Select date and time..."
+                      min={getMinDateTime()}
+                      onChange={(e) => handleDateChange(e.target.value)}
+                      data-testid="input-datetime-local"
+                    />
+                  </div>
                 </div>
               </FormControl>
               

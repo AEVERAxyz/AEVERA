@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Hourglass, Lock, Unlock, Clock, ExternalLink, Sparkles, Copy, Check, Share2 } from "lucide-react";
+import { Hourglass, Lock, Unlock, Clock, ExternalLink, Sparkles, Copy, Check, Share2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { queryClient } from "@/lib/queryClient";
 
 interface CapsuleData {
   id: string;
@@ -137,9 +139,246 @@ function RevealedMessage({ message, sealerIdentity }: { message: string; sealerI
   );
 }
 
+interface ZoraMintSectionProps {
+  capsule: CapsuleData;
+  currentUserAddress: string | null;
+  onMintSuccess: () => void;
+}
+
+function ZoraMintSection({ capsule, currentUserAddress, onMintSuccess }: ZoraMintSectionProps) {
+  const { toast } = useToast();
+  const [isMinting, setIsMinting] = useState(false);
+  const [showTxInput, setShowTxInput] = useState(false);
+  const [txHash, setTxHash] = useState("");
+
+  const isAuthor = currentUserAddress && capsule.sealerAddress 
+    ? currentUserAddress.toLowerCase() === capsule.sealerAddress.toLowerCase()
+    : false;
+
+  const registerMint = useMutation({
+    mutationFn: async (transactionHash: string) => {
+      const response = await fetch(`/api/capsules/${capsule.id}/mint`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          transactionHash,
+          authorAddress: currentUserAddress,
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to register mint");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "NFT Registered!",
+        description: "Your capsule has been minted and recorded with provenance.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/capsules', capsule.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/archive'] });
+      setShowTxInput(false);
+      setTxHash("");
+      onMintSuccess();
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Registration Failed",
+        description: error.message,
+      });
+    },
+  });
+
+  const handleMintOnZora = async () => {
+    if (!isAuthor) {
+      toast({
+        variant: "destructive",
+        title: "Not Authorized",
+        description: "Only the capsule author can mint this as an NFT.",
+      });
+      return;
+    }
+
+    setIsMinting(true);
+    
+    try {
+      const provenanceMetadata = {
+        name: `TimeCapsule by ${capsule.sealerIdentity || 'Anonymous'}`,
+        description: capsule.decryptedContent || "A time-locked message",
+        attributes: [
+          { trait_type: "Platform", value: "TimeCapsule" },
+          { trait_type: "Author", value: capsule.sealerIdentity || "Anonymous" },
+          { trait_type: "Sealed At", value: capsule.createdAt },
+          { trait_type: "Revealed At", value: capsule.revealDate },
+          { trait_type: "Message Hash", value: capsule.messageHash },
+          { trait_type: "Capsule ID", value: capsule.id },
+        ],
+        external_url: `${window.location.origin}/capsule/${capsule.id}`,
+      };
+
+      const zoraMintUrl = `https://zora.co/create?` + new URLSearchParams({
+        name: provenanceMetadata.name,
+        description: provenanceMetadata.description.slice(0, 500),
+      }).toString();
+
+      window.open(zoraMintUrl, '_blank');
+      setShowTxInput(true);
+
+      toast({
+        title: "Minting Started",
+        description: "Complete the minting on Zora, then paste the transaction hash below.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Minting Failed",
+        description: "Failed to initiate minting. Please try again.",
+      });
+    } finally {
+      setIsMinting(false);
+    }
+  };
+
+  const handleRegisterTx = () => {
+    if (!txHash.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Transaction Hash Required",
+        description: "Please paste the transaction hash from Zora.",
+      });
+      return;
+    }
+    registerMint.mutate(txHash.trim());
+  };
+
+  if (capsule.isMinted && capsule.transactionHash) {
+    return (
+      <div className="pt-6 border-t border-white/10">
+        <a
+          href={`https://zora.co/collect/base:${capsule.transactionHash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+          data-testid="link-view-nft"
+        >
+          <ExternalLink className="h-5 w-5" />
+          View on Zora
+        </a>
+        <p className="text-center text-sm text-muted-foreground mt-3">
+          This capsule has been minted as an NFT on Base.
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAuthor) {
+    return (
+      <div className="pt-6 border-t border-white/10">
+        <div className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-purple-600/30 to-pink-600/30 border border-white/10 flex items-center justify-center text-muted-foreground">
+          <Sparkles className="mr-2 h-5 w-5 opacity-50" />
+          Author-Only Minting
+        </div>
+        <p className="text-center text-sm text-muted-foreground mt-3">
+          Only the capsule author can mint this message as an NFT.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pt-6 border-t border-white/10 space-y-4">
+      {!showTxInput ? (
+        <>
+          <Button
+            onClick={handleMintOnZora}
+            disabled={isMinting}
+            className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+            data-testid="button-mint-nft"
+          >
+            {isMinting ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Preparing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-5 w-5" />
+                Mint on Zora
+              </>
+            )}
+          </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            Mint this message as a limited edition NFT with provenance on Base.
+          </p>
+        </>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-soft-muted text-center">
+            Complete minting on Zora, then paste the transaction hash below:
+          </p>
+          <div className="flex gap-2">
+            <Input
+              placeholder="0x..."
+              value={txHash}
+              onChange={(e) => setTxHash(e.target.value)}
+              className="bg-black/30 border-white/10 text-soft font-mono text-sm"
+              data-testid="input-tx-hash"
+            />
+            <Button
+              onClick={handleRegisterTx}
+              disabled={registerMint.isPending}
+              className="bg-gradient-to-r from-purple-600 to-pink-600"
+              data-testid="button-register-mint"
+            >
+              {registerMint.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Register"
+              )}
+            </Button>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowTxInput(false)}
+            className="w-full text-muted-foreground"
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function getCurrentUserAddress(): string | null {
+  const storedWallet = localStorage.getItem("wallet_address");
+  if (storedWallet) return storedWallet;
+  
+  const storedUser = localStorage.getItem("farcaster_user");
+  if (storedUser) {
+    try {
+      const userData = JSON.parse(storedUser);
+      if (userData.verified_addresses?.eth_addresses?.[0]) {
+        return userData.verified_addresses.eth_addresses[0];
+      }
+    } catch (e) {
+      console.error("Failed to parse farcaster user", e);
+    }
+  }
+  return null;
+}
+
 export default function CapsulePage({ id }: Props) {
   const { toast } = useToast();
   const [hasCopied, setHasCopied] = useState(false);
+  const [currentUserAddress, setCurrentUserAddress] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentUserAddress(getCurrentUserAddress());
+  }, []);
 
   const { data: capsule, isLoading, error, refetch } = useQuery<CapsuleData>({
     queryKey: ['/api/capsules', id],
@@ -288,20 +527,12 @@ export default function CapsulePage({ id }: Props) {
                 sealerIdentity={capsule.sealerIdentity}
               />
               
-              {/* NFT Mint Button */}
-              <div className="pt-6 border-t border-white/10">
-                <Button
-                  disabled
-                  className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 opacity-70 cursor-not-allowed"
-                  data-testid="button-mint-nft"
-                >
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Mint on Zora (Coming Soon)
-                </Button>
-                <p className="text-center text-sm text-muted-foreground mt-3">
-                  Soon you'll be able to mint this message as a limited edition NFT on Base.
-                </p>
-              </div>
+              {/* NFT Mint Button - Author Only */}
+              <ZoraMintSection 
+                capsule={capsule} 
+                currentUserAddress={currentUserAddress}
+                onMintSuccess={() => refetch()}
+              />
             </div>
           ) : (
             /* LOCKED STATE */

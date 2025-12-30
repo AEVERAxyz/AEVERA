@@ -6,7 +6,7 @@ TimeCapsule is a web application that allows users to create encrypted time-lock
 
 ### Authentication
 - **Farcaster Sign-In**: Users authenticate via Neynar's Sign in with Farcaster popup flow (SIWN script v1.2.0)
-- **Coinbase Smart Wallet**: Alternative login option via @coinbase/wallet-sdk
+- **Base Smart Wallet**: Alternative login option via @coinbase/wallet-sdk with official Base branding
 - **Identity Selection**: After sign-in, users can choose to post as their @username or any verified address (ENS/.base.eth names resolved via API)
 - **Environment Variables**: Requires `NEYNAR_API_KEY` (server) and `VITE_NEYNAR_CLIENT_ID` (client)
 
@@ -43,10 +43,19 @@ Creator attribution: gelassen.eth
 ### API Endpoints
 - `POST /api/capsules` - Create a new time capsule
 - `GET /api/capsules/:id` - Get capsule details (auto-decrypts if revealed)
+- `POST /api/capsules/:id/mint` - Register NFT minting (author-only, with provenance)
+- `GET /api/stats` - Get global capsule count
+- `GET /api/archive` - List all capsules with search/filter support
 - `GET /api/farcaster/user/:fid` - Fetch Farcaster user profile with verified addresses
 - `GET /api/resolve-ens/:address` - Resolve ENS or .base.eth name for an address
 - `GET /frame/:id` - Farcaster Frame HTML for sharing
 - `POST /frame/:id` - Farcaster Frame action handler
+
+### Features
+- **Transparency Archive**: Live table showing all capsules with search by address/ENS
+- **Global Counter**: Footer displays total messages sent to the future
+- **Zora NFT Minting**: Author-only minting with provenance metadata (platform, author, dates, hash)
+- **Premium Parchment Effect**: Revealed messages display with decorative scroll styling
 
 ### Data Storage
 - **Database**: PostgreSQL accessed via Drizzle ORM

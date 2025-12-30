@@ -7,8 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, CheckCircle, Loader2, Wallet } from "lucide-react";
+import { User, CheckCircle, Loader2 } from "lucide-react";
 import { SiFarcaster } from "react-icons/si";
+import { BaseLogo } from "./icons/BaseLogo";
 import { CoinbaseWalletSDK } from "@coinbase/wallet-sdk";
 
 export interface Identity {
@@ -379,11 +380,11 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
         <div className="relative bg-black/50 border border-white/10 rounded-xl p-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-[#E0E0E0]" />
+              <div className="w-10 h-10 rounded-full bg-[#0052FF] flex items-center justify-center">
+                <BaseLogo className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs text-soft-muted uppercase tracking-wider">Connected Wallet</p>
+                <p className="text-xs text-soft-muted uppercase tracking-wider">Base Wallet</p>
                 <p className="text-lg font-display font-bold text-soft" data-testid="text-identity">
                   {walletEns || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}
                 </p>
@@ -451,12 +452,12 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
 
             <Button
               variant="outline"
-              className="w-full h-12 border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-soft gap-2"
+              className="w-full h-12 border-[#0052FF]/30 bg-[#0052FF]/10 text-soft gap-2"
               onClick={connectCoinbaseWallet}
               data-testid="button-wallet-login"
             >
-              <Wallet className="w-5 h-5 text-blue-400" />
-              Connect Smart Wallet
+              <BaseLogo className="w-5 h-5" />
+              Sign in with Base Wallet
             </Button>
           </div>
           

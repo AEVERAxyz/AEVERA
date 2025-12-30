@@ -79,17 +79,41 @@
     0 0 40px rgba(251, 191, 36, 0.1);
 }
 
-/* DateTime Input White Icons - Force bright */
+/* DateTime Input - Custom White Calendar Icon */
 .datetime-input {
   color-scheme: dark;
+  position: relative;
 }
+
+/* Hide default calendar icon and replace with custom SVG */
 .datetime-input::-webkit-calendar-picker-indicator {
-  filter: invert(1) brightness(2) !important;
-  opacity: 1;
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 48px;
+  height: 100%;
   cursor: pointer;
+  z-index: 10;
 }
-.datetime-input::-webkit-calendar-picker-indicator:hover {
-  opacity: 1;
+
+/* Custom calendar icon using CSS */
+.datetime-wrapper {
+  position: relative;
+}
+
+.datetime-wrapper::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  z-index: 5;
 }
 
 /* Midnight Base Blue Neon Glow Effects - Subtle */

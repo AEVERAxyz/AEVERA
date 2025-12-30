@@ -174,6 +174,91 @@ export async function registerRoutes(
     }
   });
 
+  // --- Stats & Archive ---
+
+  app.get('/api/stats', async (req, res) => {
+    try {
+      const count = await storage.getCapsuleCount();
+      res.json({ totalCapsules: count });
+    } catch (error) {
+      console.error('Stats error:', error);
+      res.status(500).json({ message: 'Failed to get stats' });
+    }
+  });
+
+  app.get('/api/archive', async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const search = req.query.search as string | undefined;
+      
+      const capsulesList = await storage.listCapsules(limit, offset, search);
+      
+      const archiveItems = capsulesList.map((c) => {
+        const now = new Date();
+        const revealDate = new Date(c.revealDate);
+        const isRevealed = now >= revealDate;
+        
+        return {
+          id: c.id,
+          author: c.sealerIdentity || c.sealerAddress || 'Anonymous',
+          authorAddress: c.sealerAddress,
+          sealedAt: c.createdAt,
+          revealDate: c.revealDate,
+          status: isRevealed ? 'revealed' : 'locked',
+          isMinted: c.isMinted,
+          transactionHash: c.transactionHash,
+        };
+      });
+      
+      res.json({ capsules: archiveItems });
+    } catch (error) {
+      console.error('Archive error:', error);
+      res.status(500).json({ message: 'Failed to get archive' });
+    }
+  });
+
+  // --- Zora Minting ---
+
+  app.post('/api/capsules/:id/mint', async (req, res) => {
+    const idSchema = z.string().uuid();
+    const result = idSchema.safeParse(req.params.id);
+    
+    if (!result.success) {
+      return res.status(400).json({ message: 'Invalid Capsule ID' });
+    }
+
+    const capsule = await storage.getCapsule(req.params.id);
+    if (!capsule) {
+      return res.status(404).json({ message: 'Capsule not found' });
+    }
+
+    const now = new Date();
+    const revealDate = new Date(capsule.revealDate);
+    if (now < revealDate) {
+      return res.status(400).json({ message: 'Capsule not yet revealed' });
+    }
+
+    if (capsule.isMinted) {
+      return res.status(400).json({ message: 'Already minted', transactionHash: capsule.transactionHash });
+    }
+
+    const { transactionHash, authorAddress } = req.body;
+    
+    if (!transactionHash || typeof transactionHash !== 'string') {
+      return res.status(400).json({ message: 'Transaction hash required' });
+    }
+
+    if (capsule.sealerAddress && authorAddress) {
+      if (capsule.sealerAddress.toLowerCase() !== authorAddress.toLowerCase()) {
+        return res.status(403).json({ message: 'Only the author can mint this capsule' });
+      }
+    }
+
+    const updated = await storage.updateCapsuleMinted(req.params.id, transactionHash);
+    res.json({ success: true, capsule: updated });
+  });
+
   // --- Farcaster Frame Routes ---
 
   app.get('/frame/:id', async (req, res) => {

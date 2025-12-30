@@ -1,11 +1,18 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CreateCapsuleForm } from "@/components/CreateCapsuleForm";
 import { SuccessCard } from "@/components/SuccessCard";
+import { ArchiveTable } from "@/components/ArchiveTable";
 import { motion } from "framer-motion";
 import { Hourglass } from "lucide-react";
 
 export default function Home() {
   const [createdCapsuleId, setCreatedCapsuleId] = useState<string | null>(null);
+  
+  const { data: stats } = useQuery<{ totalCapsules: number }>({
+    queryKey: ["/api/stats"],
+    refetchInterval: 30000,
+  });
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden">
@@ -55,7 +62,19 @@ export default function Home() {
         </motion.div>
       </main>
 
-      <footer className="mt-16 text-center space-y-2">
+      <ArchiveTable />
+
+      <footer className="mt-16 text-center space-y-3 pb-8">
+        {stats && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-lg font-display font-bold text-primary/80"
+            data-testid="text-global-counter"
+          >
+            {stats.totalCapsules.toLocaleString()} messages sent to the future
+          </motion.p>
+        )}
         <p className="text-sm text-soft-muted/60 font-mono">
           Built on Base • Farcaster Frame Compatible • Zora Integration
         </p>
