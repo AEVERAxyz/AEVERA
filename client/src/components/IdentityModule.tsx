@@ -304,25 +304,33 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
   if (user) {
     return (
       <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-accent/20 rounded-xl blur opacity-20"></div>
-        <div className="relative bg-black/50 border border-white/10 rounded-xl p-4">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500/20 to-[#1652F0]/20 rounded-xl blur opacity-20"></div>
+        <div className="relative bg-black/50 border border-[#1652F0]/30 rounded-xl p-4">
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
-                {user.pfp_url ? (
-                  <img 
-                    src={user.pfp_url} 
-                    alt={user.username} 
-                    className="w-10 h-10 rounded-full border border-white/20"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                    <User className="w-5 h-5 text-[#E0E0E0]" />
+                <div className="relative">
+                  {user.pfp_url ? (
+                    <img 
+                      src={user.pfp_url} 
+                      alt={user.username} 
+                      className="w-10 h-10 rounded-full border border-white/20"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
+                      <User className="w-5 h-5 text-[#E0E0E0]" />
+                    </div>
+                  )}
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center border-2 border-black">
+                    <SiFarcaster className="w-3 h-3 text-white" />
                   </div>
-                )}
+                </div>
                 <div>
-                  <p className="text-xs text-soft-muted uppercase tracking-wider">Signed in as</p>
-                  <p className="text-lg font-display font-bold text-soft" data-testid="text-identity">
+                  <p className="text-xs text-[#CBD5E1] uppercase tracking-wider flex items-center gap-1">
+                    <SiFarcaster className="w-3 h-3 text-purple-400" />
+                    Signed in as
+                  </p>
+                  <p className="text-lg font-display font-bold text-[#F8FAFC]" data-testid="text-identity">
                     @{user.username}
                   </p>
                 </div>
@@ -341,16 +349,16 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
               </div>
             </div>
 
-            <div className="border-t border-white/10 pt-4">
-              <label className="text-sm text-soft-muted mb-2 block">Post as:</label>
+            <div className="border-t border-[#1652F0]/30 pt-4">
+              <label className="text-sm text-[#1652F0] mb-2 block font-medium">Post as:</label>
               <Select value={selectedIdentity} onValueChange={handleIdentitySelect}>
                 <SelectTrigger 
-                  className="w-full bg-black/30 border-white/10 text-soft"
+                  className="w-full bg-black/30 border-[#1652F0]/30 text-[#F8FAFC]"
                   data-testid="select-identity"
                 >
                   <SelectValue placeholder="Select identity" />
                 </SelectTrigger>
-                <SelectContent className="bg-black/90 border-white/10">
+                <SelectContent className="bg-black/90 border-[#1652F0]/30">
                   <SelectItem value="username" data-testid="select-item-username">
                     @{user.username}
                   </SelectItem>
@@ -376,16 +384,19 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
   if (walletAddress) {
     return (
       <div className="relative group">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-accent/20 rounded-xl blur opacity-20"></div>
-        <div className="relative bg-black/50 border border-white/10 rounded-xl p-4">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#0052FF]/20 to-[#1652F0]/20 rounded-xl blur opacity-20"></div>
+        <div className="relative bg-black/50 border border-[#1652F0]/30 rounded-xl p-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#0052FF] flex items-center justify-center">
                 <BaseLogo className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs text-soft-muted uppercase tracking-wider">Base Wallet</p>
-                <p className="text-lg font-display font-bold text-soft" data-testid="text-identity">
+                <p className="text-xs text-[#CBD5E1] uppercase tracking-wider flex items-center gap-1">
+                  <BaseLogo className="w-3 h-3" />
+                  Signed in as
+                </p>
+                <p className="text-lg font-display font-bold text-[#F8FAFC]" data-testid="text-identity">
                   {walletEns || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}
                 </p>
               </div>

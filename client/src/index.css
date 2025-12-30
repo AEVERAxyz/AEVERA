@@ -97,6 +97,10 @@
   box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
 }
 
+.glow-cyan {
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+}
+
 /* Parchment/Scroll Card */
 .parchment-card {
   background: linear-gradient(135deg, 

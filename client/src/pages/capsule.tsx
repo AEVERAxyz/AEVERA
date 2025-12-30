@@ -94,7 +94,25 @@ function CountdownTimer({ targetDate }: { targetDate: Date }) {
   );
 }
 
-function RevealedMessage({ message, sealerIdentity }: { message: string; sealerIdentity?: string }) {
+interface RevealedMessageProps {
+  message: string;
+  sealerIdentity?: string;
+  sealedAt?: string;
+  revealedAt?: string;
+}
+
+function formatGermanDateTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('de-DE', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt }: RevealedMessageProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -123,11 +141,15 @@ function RevealedMessage({ message, sealerIdentity }: { message: string; sealerI
             </div>
             <div>
               <h3 className="text-lg font-display font-bold text-amber-100">Message Revealed</h3>
-              {sealerIdentity && (
-                <p className="text-sm text-amber-200/60" data-testid="text-revealed-sealer">From: {sealerIdentity}</p>
-              )}
             </div>
           </div>
+          
+          {/* Contextual header with German format */}
+          {sealerIdentity && sealedAt && revealedAt && (
+            <p className="text-sm text-amber-200/70 mb-4 italic" data-testid="text-revealed-context">
+              {sealerIdentity} hat am {formatGermanDateTime(sealedAt)} für {formatGermanDateTime(revealedAt)} geschrieben:
+            </p>
+          )}
           
           <div className="prose prose-invert max-w-none">
             <p className="text-lg md:text-xl leading-relaxed text-amber-50/90 font-light whitespace-pre-wrap">
@@ -399,6 +421,11 @@ export default function CapsulePage({ id }: Props) {
     },
   });
 
+  const { data: stats } = useQuery<{ totalCapsules: number }>({
+    queryKey: ["/api/stats"],
+    refetchInterval: 30000,
+  });
+
   const frameUrl = `${window.location.origin}/frame/${id}`;
 
   const copyToClipboard = async (text: string, label: string) => {
@@ -528,6 +555,8 @@ export default function CapsulePage({ id }: Props) {
               <RevealedMessage 
                 message={capsule.decryptedContent || "Message could not be decrypted."} 
                 sealerIdentity={capsule.sealerIdentity}
+                sealedAt={capsule.createdAt}
+                revealedAt={capsule.revealDate}
               />
               
               {/* NFT Mint Button - Author Only */}
@@ -581,13 +610,19 @@ export default function CapsulePage({ id }: Props) {
           )}
 
           {/* Share Section */}
-          <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
-            <div className="bg-black/40 rounded-xl p-4 border border-white/5">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">Share Link</p>
-              <div className="flex items-center gap-2 bg-black/60 p-3 rounded-lg border border-white/5">
-                <code className="text-sm text-primary flex-1 truncate font-mono" data-testid="text-capsule-url">
+          <div className="mt-8 pt-6 border-t border-[#1652F0]/30 space-y-4">
+            <div className="bg-black/40 rounded-xl p-4 border border-[#1652F0]/30">
+              <p className="text-xs uppercase tracking-wider text-[#1652F0] font-semibold mb-2">Share Link</p>
+              <div className="flex items-center gap-2 bg-black/60 p-3 rounded-lg border border-[#1652F0]/20">
+                <a 
+                  href={frameUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#1652F0] flex-1 truncate font-mono hover:underline"
+                  data-testid="text-capsule-url"
+                >
                   {frameUrl}
-                </code>
+                </a>
                 <Button
                   size="icon"
                   variant="ghost"
@@ -619,8 +654,23 @@ export default function CapsulePage({ id }: Props) {
         </motion.div>
       </main>
 
-      <footer className="mt-16 text-center text-sm text-muted-foreground/60 font-mono">
-        <p>Built on Base | Farcaster Frame Compatible | Zora Integration</p>
+      <footer className="mt-16 text-center space-y-4 pb-8">
+        {stats && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-lg font-display font-bold text-[#1652F0]/80"
+            data-testid="text-global-counter"
+          >
+            {stats.totalCapsules.toLocaleString()} messages sent to the future
+          </motion.p>
+        )}
+        <p className="text-xs text-[#CBD5E1]/50 font-mono tracking-wide">
+          Built on Base | Farcaster Frame Compatible | Zora Integration
+        </p>
+        <p className="text-xs text-[#CBD5E1]/40 italic tracking-widest">
+          created by gelassen.eth
+        </p>
       </footer>
     </div>
   );

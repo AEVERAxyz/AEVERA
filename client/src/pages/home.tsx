@@ -34,16 +34,16 @@ export default function Home() {
               />
             </div>
             <h1 
-              className="text-3xl md:text-4xl font-sans font-extrabold mb-3 text-[#F8FAFC] glow-text"
+              className="text-3xl md:text-4xl font-sans font-extrabold mb-3 text-[#F8FAFC] glow-text w-full"
               style={{ letterSpacing: "-0.04em" }}
             >
               TimeCapsule
             </h1>
-            <p className="text-sm text-[#CBD5E1] font-light mb-1">
+            <p className="text-sm text-[#CBD5E1] font-light mb-1 w-full text-center tracking-wide">
               Send a message to the future.
             </p>
             <p 
-              className="text-xs font-light"
+              className="text-xs font-light w-full text-center tracking-wider"
               style={{ color: "rgba(22, 82, 240, 0.7)" }}
             >
               Mint it as an NFT when revealed.
@@ -80,16 +80,16 @@ export default function Home() {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-lg font-display font-bold text-primary/80"
+            className="text-lg font-display font-bold text-[#1652F0]/80"
             data-testid="text-global-counter"
           >
             {stats.totalCapsules.toLocaleString()} messages sent to the future
           </motion.p>
         )}
-        <p className="text-xs text-soft-muted/50 font-mono tracking-wide">
-          Built on Base • Farcaster Frame Compatible • Zora Integration
+        <p className="text-xs text-[#CBD5E1]/50 font-mono tracking-wide">
+          Built on Base | Farcaster Frame Compatible | Zora Integration
         </p>
-        <p className="text-xs text-soft-muted/40 italic tracking-widest">
+        <p className="text-xs text-[#CBD5E1]/40 italic tracking-widest">
           created by gelassen.eth
         </p>
       </footer>

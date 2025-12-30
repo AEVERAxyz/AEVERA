@@ -42,8 +42,8 @@ export function ArchiveTable() {
     setDebouncedSearch(searchTerm);
   };
 
-  const formatDate = (dateStr: string) => {
-    return format(new Date(dateStr), "MMM d, yyyy");
+  const formatDateTime = (dateStr: string) => {
+    return format(new Date(dateStr), "MMM d, yyyy HH:mm");
   };
 
   const formatAddress = (addr?: string) => {
@@ -108,7 +108,7 @@ export function ArchiveTable() {
                     Sealed At
                   </th>
                   <th className="text-left py-3 px-2 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
-                    Reveal Date
+                    Revealed At
                   </th>
                   <th className="text-left py-3 px-2 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
                     Status
@@ -122,17 +122,14 @@ export function ArchiveTable() {
                 {data.capsules.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b border-[#1652F0]/20 bg-transparent hover:bg-[#1652F0]/5 transition-colors"
+                    className="border-b border-[#1652F0]/20 bg-transparent hover:bg-[#1652F0]/5 transition-colors cursor-pointer"
                     data-testid={`row-capsule-${item.id}`}
+                    onClick={() => window.location.href = `/capsule/${item.id}`}
                   >
                     <td className="py-3 px-2">
-                      <a
-                        href={`/capsule/${item.id}`}
-                        className="text-[#F8FAFC] hover:text-[#1652F0] transition-colors font-medium"
-                        data-testid={`link-capsule-${item.id}`}
-                      >
+                      <span className="text-[#F8FAFC] font-medium">
                         {item.author}
-                      </a>
+                      </span>
                       {item.authorAddress && !item.author.includes(".eth") && (
                         <p className="text-xs text-[#CBD5E1]/60">
                           {formatAddress(item.authorAddress)}
@@ -140,16 +137,16 @@ export function ArchiveTable() {
                       )}
                     </td>
                     <td className="py-3 px-2 text-sm text-[#CBD5E1]">
-                      {formatDate(item.sealedAt)}
+                      {formatDateTime(item.sealedAt)}
                     </td>
                     <td className="py-3 px-2 text-sm text-[#CBD5E1]">
-                      {formatDate(item.revealDate)}
+                      {formatDateTime(item.revealDate)}
                     </td>
                     <td className="py-3 px-2">
                       {item.status === "revealed" ? (
                         <Badge
                           variant="outline"
-                          className="border-green-500/50 bg-green-500/20 text-green-400 glow-green"
+                          className="border-cyan-500/50 bg-cyan-500/20 text-cyan-400 glow-cyan"
                         >
                           <Unlock className="w-3 h-3 mr-1" />
                           Revealed

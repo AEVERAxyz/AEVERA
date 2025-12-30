@@ -1,0 +1,43 @@
+Please execute this final comprehensive UI and Logic overhaul in one single update:
+
+1. Global Branding & Header/Footer:
+
+Header Consistency: Logo, Title, and Subtitles must be a fixed component on ALL pages (including TC5).
+
+Logo & Title: Fix logo_final.png height to 120px. Set spacing between logo and 'TimeCapsule' to 10px.
+
+Subtitle Scaling: Scale 'Send a message to the future' and 'Mint it as an NFT when revealed' so they are horizontally flush with the 'TimeCapsule' title (matching the width of the main title block).
+
+Footer: Ensure 'Transparency Archive', message counter, and 'created by gelassen.eth' are always visible on every screen.
+
+2. Component Details & Icons:
+
+New Seal Icon: Remove the Telegram-style icon from the 'Seal Capsule' button. Use the FutureCapsule-removebg.png logo instead: scale it down and rotate it 45 degrees to the right (bottle head pointing top-right).
+
+Neynar Branding: Update the Farcaster connection config: Change the app name from '0xgelassen's App' to 'TimeCapsule'.
+
+3. Unified Login & 'Post As' Logic:
+
+Profile UI: Create a consistent login display for both Base and Farcaster. Show the service logo, 'Signed in as', and a 'Post as:' Dropdown menu.
+
+Dropdown Options: Allow users to select their display name from: ENS, Base Name, Farcaster Username, or Wallet Address.
+
+4. Transparency Archive (Table):
+
+Header Update: Rename 'Reveal date' to 'Revealed at'. Add exact time (HH:MM) to both 'Sealed at' and 'Revealed at' columns.
+
+UX: Make the entire row clickable, linking directly to the message's reveal page.
+
+Design: Apply Glassmorphism (semi-transparent rows) with glowing status badges: Cyan glow for 'Revealed' and Indigo/Purple glow for 'Locked'.
+
+5. Reveal Page (TC5) & Sharing:
+
+Contextual Message: On the reveal page, display: '[Name] hat am [Sealed Date/Time] für [Reveal Date/Time] geschrieben:' followed by the message.
+
+Clickable Links: Ensure all shareable links (including the one in the share card) are actual clickable HTML hyperlinks, not just plain text.
+
+6. Final Polish:
+
+Typography: Change all dark gray subtexts to Light Ice Blue (#CBD5E1) for better readability on dark backgrounds.
+
+Animation: Add a subtle breathing pulse effect to the header logo and the 'Seal Capsule' button.
