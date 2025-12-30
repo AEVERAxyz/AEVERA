@@ -75,6 +75,7 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
   const [walletEns, setWalletEns] = useState<string | null>(null);
   const [signerUuid, setSignerUuid] = useState<string | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [walletSelectedIdentity, setWalletSelectedIdentity] = useState<string>("address");
 
   const formatAddress = useCallback((addr: string): string => {
     const ensName = addressToEns[addr.toLowerCase()];
@@ -432,8 +433,9 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
             <div className="border-t border-[#1652F0]/30 pt-4">
               <label className="text-sm text-[#1652F0] mb-2 block font-medium">Post as:</label>
               <Select 
-                value="address" 
+                value={walletSelectedIdentity} 
                 onValueChange={(val) => {
+                  setWalletSelectedIdentity(val);
                   const displayName = val === "address" 
                     ? (walletEns || `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`)
                     : `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
