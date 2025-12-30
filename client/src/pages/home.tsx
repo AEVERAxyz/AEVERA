@@ -4,7 +4,7 @@ import { CreateCapsuleForm } from "@/components/CreateCapsuleForm";
 import { SuccessCard } from "@/components/SuccessCard";
 import { ArchiveTable } from "@/components/ArchiveTable";
 import { motion } from "framer-motion";
-import { BottleLogo } from "@/components/icons/BottleLogo";
+import LogoBottle from "@/components/LogoBottle";
 
 export default function Home() {
   const [createdCapsuleId, setCreatedCapsuleId] = useState<string | null>(null);
@@ -29,7 +29,7 @@ export default function Home() {
           className="text-center mb-12"
         >
           <div className="inline-flex items-center justify-center p-4 bg-white/5 rounded-2xl mb-6 backdrop-blur-sm border border-white/10 ring-1 ring-white/5 shadow-xl">
-            <BottleLogo className="w-16 h-20" />
+            <LogoBottle />
           </div>
           <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-br from-[#E0E0E0] via-[#C0C0C0] to-[#808080] tracking-tight glow-text">
             TimeCapsule

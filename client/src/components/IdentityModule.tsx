@@ -432,10 +432,20 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
                 data-theme="dark"
               />
             </div>
+
+            <Button
+              variant="outline"
+              className="w-full h-12 border-[#0052FF]/30 bg-[#0052FF]/10 text-soft gap-2"
+              onClick={connectCoinbaseWallet}
+              data-testid="button-wallet-login"
+            >
+              <BaseLogo className="w-5 h-5" />
+              Sign in with Base Wallet
+            </Button>
             
             <Button
               variant="outline"
-              className="w-full h-12 border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-soft gap-2"
+              className="w-full h-12 border-purple-500/30 bg-purple-500/10 text-soft gap-2"
               onClick={() => {
                 const siwnBtn = document.querySelector('.neynar_signin button') as HTMLButtonElement;
                 if (siwnBtn) {
@@ -448,16 +458,6 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
             >
               <SiFarcaster className="w-5 h-5 text-purple-400" />
               Sign in with Farcaster
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full h-12 border-[#0052FF]/30 bg-[#0052FF]/10 text-soft gap-2"
-              onClick={connectCoinbaseWallet}
-              data-testid="button-wallet-login"
-            >
-              <BaseLogo className="w-5 h-5" />
-              Sign in with Base Wallet
             </Button>
           </div>
           
