@@ -4,7 +4,7 @@ import { CreateCapsuleForm } from "@/components/CreateCapsuleForm";
 import { SuccessCard } from "@/components/SuccessCard";
 import { ArchiveTable } from "@/components/ArchiveTable";
 import { motion } from "framer-motion";
-import { Hourglass } from "lucide-react";
+import { BottleLogo } from "@/components/icons/BottleLogo";
 
 export default function Home() {
   const [createdCapsuleId, setCreatedCapsuleId] = useState<string | null>(null);
@@ -28,8 +28,8 @@ export default function Home() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center justify-center p-3 bg-white/5 rounded-2xl mb-6 backdrop-blur-sm border border-white/10 ring-1 ring-white/5 shadow-xl">
-            <Hourglass className="w-8 h-8 text-accent animate-pulse" />
+          <div className="inline-flex items-center justify-center p-4 bg-white/5 rounded-2xl mb-6 backdrop-blur-sm border border-white/10 ring-1 ring-white/5 shadow-xl">
+            <BottleLogo className="w-16 h-20" />
           </div>
           <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-br from-[#E0E0E0] via-[#C0C0C0] to-[#808080] tracking-tight glow-text">
             TimeCapsule
@@ -64,7 +64,7 @@ export default function Home() {
 
       <ArchiveTable />
 
-      <footer className="mt-16 text-center space-y-3 pb-8">
+      <footer className="mt-16 text-center space-y-4 pb-8">
         {stats && (
           <motion.p
             initial={{ opacity: 0 }}
@@ -75,11 +75,11 @@ export default function Home() {
             {stats.totalCapsules.toLocaleString()} messages sent to the future
           </motion.p>
         )}
-        <p className="text-sm text-soft-muted/60 font-mono">
+        <p className="text-xs text-soft-muted/50 font-mono tracking-wide">
           Built on Base • Farcaster Frame Compatible • Zora Integration
         </p>
-        <p className="text-xs text-soft-muted/40 font-light tracking-wide">
-          Created by gelassen.eth
+        <p className="text-xs text-soft-muted/40 italic tracking-widest">
+          created by gelassen.eth
         </p>
       </footer>
     </div>

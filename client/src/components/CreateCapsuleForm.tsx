@@ -14,7 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, Rocket, Clock, Globe } from "lucide-react";
+import { Loader2, Send, Clock, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import nacl from "tweetnacl";
@@ -254,7 +254,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
               </>
             ) : (
               <>
-                <Rocket className="mr-2 h-5 w-5" />
+                <Send className="mr-2 h-5 w-5" />
                 Seal Capsule
               </>
             )}
