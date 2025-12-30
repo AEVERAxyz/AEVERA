@@ -482,17 +482,8 @@ export default function CapsulePage({ id }: Props) {
   const isRevealed = capsule.isRevealed;
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/20 rounded-full blur-[120px]" />
-        {isRevealed && (
-          <div className="absolute top-[30%] left-[50%] w-[30%] h-[30%] bg-amber-500/10 rounded-full blur-[100px]" />
-        )}
-      </div>
-
-      <main className="w-full max-w-3xl relative z-10">
+    <div className="min-h-screen w-full flex flex-col items-center p-4 md:p-8 relative">
+      <main className="w-full max-w-3xl relative z-10 flex-1 flex flex-col">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -501,19 +492,24 @@ export default function CapsulePage({ id }: Props) {
           className="text-center mb-10"
         >
           <Link href="/">
-            <div className="inline-flex items-center justify-center mb-10 cursor-pointer">
-              <img 
-                src={logoImage} 
-                alt="TimeCapsule Logo" 
-                className="h-[160px] w-auto"
-                style={{ filter: "drop-shadow(0 0 20px rgba(22, 82, 240, 0.6))" }}
-                data-testid="img-logo"
-              />
+            <div className="flex flex-col items-center max-w-md mx-auto cursor-pointer">
+              <div className="inline-flex items-center justify-center mb-[10px]">
+                <img 
+                  src={logoImage} 
+                  alt="TimeCapsule Logo" 
+                  className="h-[120px] w-auto breathing-animation"
+                  style={{ filter: "drop-shadow(0 0 20px rgba(22, 82, 240, 0.6))" }}
+                  data-testid="img-logo"
+                />
+              </div>
+              <h1 
+                className="text-3xl md:text-4xl font-sans font-extrabold mb-3 text-[#F8FAFC] glow-text"
+                style={{ letterSpacing: "-0.04em" }}
+              >
+                TimeCapsule
+              </h1>
             </div>
           </Link>
-          <h1 className="text-4xl md:text-6xl font-display font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-br from-white via-white/90 to-white/50 tracking-tight glow-text">
-            TimeCapsule
-          </h1>
         </motion.div>
 
         {/* Status Card */}
@@ -521,7 +517,7 @@ export default function CapsulePage({ id }: Props) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="glass-card rounded-3xl p-6 md:p-10 border border-white/10 shadow-2xl relative overflow-hidden neon-container"
+          className="glass-card rounded-3xl p-6 md:p-10 relative overflow-visible"
         >
           {/* Decorative gradient border effect */}
           <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isRevealed ? 'from-transparent via-amber-400 to-transparent' : 'from-transparent via-primary to-transparent'} opacity-50`}></div>
@@ -545,21 +541,21 @@ export default function CapsulePage({ id }: Props) {
             /* LOCKED STATE */
             <div className="space-y-8">
               {capsule.sealerIdentity && (
-                <div className="text-center pb-4 border-b border-white/10">
-                  <p className="text-sm text-muted-foreground mb-1">Sealed by</p>
-                  <p className="text-lg font-display font-bold text-primary" data-testid="text-sealer-identity">
+                <div className="text-center pb-4 border-b border-[#1652F0]/30">
+                  <p className="text-sm text-[#CBD5E1] mb-1">Sealed by</p>
+                  <p className="text-lg font-display font-bold text-[#1652F0]" data-testid="text-sealer-identity">
                     {capsule.sealerIdentity}
                   </p>
                 </div>
               )}
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-6 ring-2 ring-primary/30">
-                  <Lock className="w-10 h-10 text-primary" />
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-[#1652F0]/10 rounded-full mb-6 ring-2 ring-[#1652F0]/30">
+                  <Lock className="w-10 h-10 text-[#1652F0]" />
                 </div>
-                <h2 className="text-2xl md:text-3xl font-display font-bold text-white mb-2">
+                <h2 className="text-2xl md:text-3xl font-display font-bold text-[#F8FAFC] glow-text mb-2">
                   Capsule Locked
                 </h2>
-                <p className="text-muted-foreground">
+                <p className="text-[#CBD5E1]">
                   This message is sealed until the reveal time.
                 </p>
               </div>

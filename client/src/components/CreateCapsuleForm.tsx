@@ -168,7 +168,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-lg font-medium text-primary/80">
+              <FormLabel className="text-lg font-medium text-[#1652F0]">
                 Message to the Future
               </FormLabel>
               <FormControl>
@@ -182,8 +182,8 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
                   />
                 </div>
               </FormControl>
-              <FormDescription className="text-muted-foreground flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+              <FormDescription className="text-[#CBD5E1] flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1652F0]"></span>
                 This message will be encrypted until the reveal date.
               </FormDescription>
               <FormMessage />
@@ -196,7 +196,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           name="revealDate"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel className="text-lg font-medium text-primary/80 flex items-center gap-2">
+              <FormLabel className="text-lg font-medium text-[#1652F0] flex items-center gap-2">
                 <Clock className="w-5 h-5" />
                 Reveal Date & Time
               </FormLabel>
@@ -217,17 +217,17 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
               </FormControl>
               
               {selectedUtcTime && (
-                <div className="mt-3 p-4 rounded-xl bg-black/30 border border-white/5">
+                <div className="mt-3 p-4 rounded-xl bg-black/30 border border-[#1652F0]/30">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-accent" />
+                    <span className="text-sm text-[#CBD5E1] flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-[#1652F0]" />
                       Reveal Time (UTC):
                     </span>
-                    <span className="text-sm font-mono text-primary font-semibold">
+                    <span className="text-sm font-mono text-[#1652F0] font-semibold">
                       {formatUTC(selectedUtcTime)}
                     </span>
                   </div>
-                  <p className="text-muted-foreground/70 text-xs mt-2">
+                  <p className="text-[#CBD5E1]/70 text-xs mt-2">
                     The capsule will reveal at this UTC time worldwide.
                   </p>
                 </div>
@@ -244,7 +244,8 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           <Button
             type="submit"
             disabled={isSubmitting || !canSubmit}
-            className="w-full h-16 text-lg font-bold rounded-xl bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all neon-glow"
+            className="w-full h-16 text-lg font-bold rounded-xl bg-gradient-to-r from-[#1652F0] to-[#3B82F6] hover:opacity-90 transition-all breathing-button"
+            style={{ boxShadow: "0 0 20px rgba(22, 82, 240, 0.5)" }}
             data-testid="button-seal-capsule"
           >
             {isSubmitting ? (
@@ -262,8 +263,8 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
         </motion.div>
 
         {!identity && (
-          <p className="text-center text-sm text-muted-foreground">
-            Sign in with Farcaster above to seal your capsule.
+          <p className="text-center text-sm text-[#CBD5E1]">
+            Sign in above to seal your capsule.
           </p>
         )}
       </form>

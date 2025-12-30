@@ -59,9 +59,9 @@ export function ArchiveTable() {
       transition={{ delay: 0.4, duration: 0.5 }}
       className="w-full max-w-4xl mx-auto mt-12"
     >
-      <div className="glass-card rounded-2xl p-6 border border-white/10">
+      <div className="glass-card rounded-2xl p-6 overflow-visible">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-          <h2 className="text-xl font-display font-bold text-soft">
+          <h2 className="text-xl font-display font-bold text-[#F8FAFC] glow-text">
             Transparency Archive
           </h2>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -100,20 +100,20 @@ export function ArchiveTable() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-3 px-2 text-xs text-soft-muted font-medium uppercase tracking-wider">
+                <tr className="border-b border-[#1652F0]/40">
+                  <th className="text-left py-3 px-2 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
                     Author
                   </th>
-                  <th className="text-left py-3 px-2 text-xs text-soft-muted font-medium uppercase tracking-wider">
+                  <th className="text-left py-3 px-2 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
                     Sealed At
                   </th>
-                  <th className="text-left py-3 px-2 text-xs text-soft-muted font-medium uppercase tracking-wider">
+                  <th className="text-left py-3 px-2 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
                     Reveal Date
                   </th>
-                  <th className="text-left py-3 px-2 text-xs text-soft-muted font-medium uppercase tracking-wider">
+                  <th className="text-left py-3 px-2 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="text-left py-3 px-2 text-xs text-soft-muted font-medium uppercase tracking-wider">
+                  <th className="text-left py-3 px-2 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
                     NFT
                   </th>
                 </tr>
@@ -122,34 +122,34 @@ export function ArchiveTable() {
                 {data.capsules.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b border-white/5 hover-elevate"
+                    className="border-b border-[#1652F0]/20 bg-transparent hover:bg-[#1652F0]/5 transition-colors"
                     data-testid={`row-capsule-${item.id}`}
                   >
                     <td className="py-3 px-2">
                       <a
                         href={`/capsule/${item.id}`}
-                        className="text-soft hover:text-primary transition-colors font-medium"
+                        className="text-[#F8FAFC] hover:text-[#1652F0] transition-colors font-medium"
                         data-testid={`link-capsule-${item.id}`}
                       >
                         {item.author}
                       </a>
                       {item.authorAddress && !item.author.includes(".eth") && (
-                        <p className="text-xs text-soft-muted/60">
+                        <p className="text-xs text-[#CBD5E1]/60">
                           {formatAddress(item.authorAddress)}
                         </p>
                       )}
                     </td>
-                    <td className="py-3 px-2 text-sm text-soft-muted">
+                    <td className="py-3 px-2 text-sm text-[#CBD5E1]">
                       {formatDate(item.sealedAt)}
                     </td>
-                    <td className="py-3 px-2 text-sm text-soft-muted">
+                    <td className="py-3 px-2 text-sm text-[#CBD5E1]">
                       {formatDate(item.revealDate)}
                     </td>
                     <td className="py-3 px-2">
                       {item.status === "revealed" ? (
                         <Badge
                           variant="outline"
-                          className="border-green-500/30 bg-green-500/10 text-green-400"
+                          className="border-green-500/50 bg-green-500/20 text-green-400 glow-green"
                         >
                           <Unlock className="w-3 h-3 mr-1" />
                           Revealed
@@ -157,7 +157,7 @@ export function ArchiveTable() {
                       ) : (
                         <Badge
                           variant="outline"
-                          className="border-amber-500/30 bg-amber-500/10 text-amber-400"
+                          className="border-indigo-500/50 bg-indigo-500/20 text-indigo-400 glow-indigo"
                         >
                           <Lock className="w-3 h-3 mr-1" />
                           Locked
@@ -170,17 +170,17 @@ export function ArchiveTable() {
                           href={`https://zora.co/collect/base:${item.transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-primary hover:underline text-sm"
+                          className="inline-flex items-center gap-1 text-[#1652F0] hover:underline text-sm"
                           data-testid={`link-nft-${item.id}`}
                         >
                           View <ExternalLink className="w-3 h-3" />
                         </a>
                       ) : item.status === "revealed" ? (
-                        <span className="text-xs text-soft-muted/60">
+                        <span className="text-xs text-[#CBD5E1]/60">
                           Not minted
                         </span>
                       ) : (
-                        <span className="text-xs text-soft-muted/40">-</span>
+                        <span className="text-xs text-[#CBD5E1]/40">-</span>
                       )}
                     </td>
                   </tr>

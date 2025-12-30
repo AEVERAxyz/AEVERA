@@ -64,27 +64,27 @@ export function SuccessCard({ capsuleId, onReset }: Props) {
     <motion.div
       initial={{ opacity: 0, scale: 0.9, y: 20 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      className="glass-card rounded-2xl p-8 text-center space-y-6 max-w-2xl w-full mx-auto"
+      className="glass-card rounded-2xl p-8 text-center space-y-6 max-w-2xl w-full mx-auto overflow-visible"
     >
       <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 ring-1 ring-green-500/50">
         <Check className="w-10 h-10 text-green-400" />
       </div>
 
       <div className="space-y-2">
-        <h2 className="text-3xl font-display text-soft">Capsule Sealed!</h2>
-        <p className="text-soft-muted">
+        <h2 className="text-3xl font-display text-[#F8FAFC] glow-text">Capsule Sealed!</h2>
+        <p className="text-[#CBD5E1]">
           Your message has been encrypted and stored safely. It will automatically reveal at the scheduled time.
         </p>
       </div>
 
-      <div className="bg-black/40 rounded-xl p-4 border border-white/5 space-y-2 text-left">
-        <p className="text-xs uppercase tracking-wider text-soft-muted font-semibold">Capsule Link</p>
-        <div className="flex items-center gap-2 bg-black/60 p-3 rounded-lg border border-white/5">
+      <div className="bg-black/40 rounded-xl p-4 border border-[#1652F0]/30 space-y-2 text-left">
+        <p className="text-xs uppercase tracking-wider text-[#1652F0] font-semibold">Capsule Link</p>
+        <div className="flex items-center gap-2 bg-black/60 p-3 rounded-lg border border-[#1652F0]/20">
           <a 
             href={capsuleUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-primary flex-1 truncate font-mono hover:underline cursor-pointer"
+            className="text-sm text-[#1652F0] flex-1 truncate font-mono hover:underline cursor-pointer"
             data-testid="link-capsule-url"
           >
             {capsuleUrl}

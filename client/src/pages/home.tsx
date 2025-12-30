@@ -15,13 +15,8 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-8 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/15 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/15 rounded-full blur-[120px]" />
-      </div>
-
-      <main className="w-full max-w-2xl relative z-10">
+    <div className="min-h-screen w-full flex flex-col items-center p-4 md:p-8 relative">
+      <main className="w-full max-w-2xl relative z-10 flex-1 flex flex-col justify-center">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -33,18 +28,18 @@ export default function Home() {
               <img 
                 src={logoImage} 
                 alt="TimeCapsule Logo" 
-                className="h-[160px] w-auto"
+                className="h-[120px] w-auto breathing-animation"
                 style={{ filter: "drop-shadow(0 0 20px rgba(22, 82, 240, 0.6))" }}
                 data-testid="img-logo"
               />
             </div>
             <h1 
-              className="text-3xl md:text-4xl font-sans font-extrabold mb-3 text-[#F8FAFC]"
+              className="text-3xl md:text-4xl font-sans font-extrabold mb-3 text-[#F8FAFC] glow-text"
               style={{ letterSpacing: "-0.04em" }}
             >
               TimeCapsule
             </h1>
-            <p className="text-sm text-[#64748B] font-light mb-1">
+            <p className="text-sm text-[#CBD5E1] font-light mb-1">
               Send a message to the future.
             </p>
             <p 
@@ -64,8 +59,8 @@ export default function Home() {
           className="relative"
         >
           {!createdCapsuleId ? (
-            <div className="glass-card rounded-3xl p-6 md:p-10 border border-white/10 shadow-2xl relative overflow-hidden neon-container">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-30"></div>
+            <div className="glass-card rounded-3xl p-6 md:p-10 relative overflow-visible">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#1652F0]/50 to-transparent opacity-50"></div>
               
               <CreateCapsuleForm onSuccess={setCreatedCapsuleId} />
             </div>
