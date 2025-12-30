@@ -28,7 +28,7 @@ export default function Home() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center justify-center mb-10">
+          <div className="inline-flex items-center justify-center mb-5">
             <img 
               src={logoImage} 
               alt="TimeCapsule Logo" 
@@ -37,12 +37,20 @@ export default function Home() {
               data-testid="img-logo"
             />
           </div>
-          <h1 className="text-5xl md:text-7xl font-display font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-br from-[#E0E0E0] via-[#C0C0C0] to-[#808080] tracking-tight glow-text">
+          <h1 
+            className="text-4xl md:text-5xl font-sans font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-br from-[#E0E0E0] via-[#C0C0C0] to-[#808080] glow-text"
+            style={{ letterSpacing: "-0.04em" }}
+          >
             TimeCapsule
           </h1>
-          <p className="text-xl md:text-2xl text-soft-muted font-light max-w-lg mx-auto leading-relaxed">
-            Send a message to the future. <br/>
-            <span className="text-primary/80">Mint it as an NFT when revealed.</span>
+          <p className="text-lg text-[#94A3B8] font-light max-w-lg mx-auto mb-1">
+            Send a message to the future.
+          </p>
+          <p 
+            className="text-sm text-[#60A5FA] font-light max-w-lg mx-auto"
+            style={{ textShadow: "0 0 8px rgba(96, 165, 250, 0.4)" }}
+          >
+            Mint it as an NFT when revealed.
           </p>
         </motion.div>
 
