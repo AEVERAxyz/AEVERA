@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Lock, Unlock, Clock, ExternalLink, Sparkles, Copy, Check, Share2, Loader2 } from "lucide-react";
-import LogoBottle from "@/components/LogoBottle";
+import logoImage from "@assets/FutureCapsule_1767061539197.jpg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -501,8 +501,13 @@ export default function CapsulePage({ id }: Props) {
           className="text-center mb-10"
         >
           <Link href="/">
-            <div className="inline-flex items-center justify-center p-4 bg-white/5 rounded-2xl mb-6 backdrop-blur-sm border border-white/10 ring-1 ring-white/5 shadow-xl cursor-pointer hover:bg-white/10 transition-colors">
-              <LogoBottle />
+            <div className="inline-flex items-center justify-center mb-6 cursor-pointer">
+              <img 
+                src={logoImage} 
+                alt="TimeCapsule Logo" 
+                className="h-[80px] w-auto"
+                data-testid="img-logo"
+              />
             </div>
           </Link>
           <h1 className="text-4xl md:text-6xl font-display font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-br from-white via-white/90 to-white/50 tracking-tight glow-text">
