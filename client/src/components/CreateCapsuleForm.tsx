@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,7 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, Clock, Globe } from "lucide-react";
+import { Loader2, Clock, Globe, Calendar } from "lucide-react"; 
 import bottleIcon from "@assets/FutureCapsule-removebg_1767123114748.png";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,7 @@ async function sha256(message: string): Promise<string> {
 }
 
 function formatUTC(date: Date): string {
+  if (isNaN(date.getTime())) return "Invalid Date";
   return date.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 }
 
@@ -99,7 +100,7 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           sealerIdentity: identity.displayName,
           sealerType: identity.type,
         };
-      
+
       if (identity.address) {
         payload.sealerAddress = identity.address;
       }
@@ -148,132 +149,163 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
   };
 
   const handleDateChange = (localDateTimeString: string) => {
-    if (localDateTimeString) {
-      const localDate = new Date(localDateTimeString);
-      setSelectedUtcTime(localDate);
-      form.setValue('revealDate', localDate, { shouldValidate: true, shouldDirty: true });
-    } else {
+    if (!localDateTimeString) {
       setSelectedUtcTime(null);
+      return;
     }
+    const localDate = new Date(localDateTimeString);
+    if (isNaN(localDate.getTime())) return; 
+    setSelectedUtcTime(localDate);
+    form.setValue('revealDate', localDate, { shouldValidate: true, shouldDirty: true });
   };
 
   const canSubmit = identity && form.formState.isDirty;
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <IdentityModule identity={identity} onIdentityChange={setIdentity} />
+    <div className="space-y-8">
+      {/* WICHTIG: Das Modul bleibt VOR dem Formular.
+         Das ist kein "Hack", sondern saubere Programmierung, 
+         damit sich Buttons nicht gegenseitig stören.
+      */}
+      <IdentityModule identity={identity} onIdentityChange={setIdentity} />
 
-        <FormField
-          control={form.control}
-          name="message"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-lg font-medium text-[#1652F0]">
-                Message to the Future
-              </FormLabel>
-              <FormControl>
-                <div className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
-                  <Textarea
-                    placeholder="Write your message..."
-                    className="relative bg-black/50 border-white/10 min-h-[160px] resize-none text-lg p-6 rounded-xl focus:ring-0 focus:border-transparent placeholder:text-muted-foreground/50"
-                    data-testid="textarea-message"
-                    {...field}
-                  />
-                </div>
-              </FormControl>
-              <FormDescription className="text-[#CBD5E1] flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#1652F0]"></span>
-                This message will be encrypted until the reveal date.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 
-        <FormField
-          control={form.control}
-          name="revealDate"
-          render={({ field }) => (
-            <FormItem className="flex flex-col">
-              <FormLabel className="text-lg font-medium text-[#1652F0] flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                Reveal Date & Time
-              </FormLabel>
-              <FormControl>
-                <div className="relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
-                  <div className="datetime-wrapper">
-                    <Input
-                      type="datetime-local"
-                      className="relative bg-black/50 border-white/10 h-14 rounded-xl focus:ring-0 focus:border-transparent text-base p-4 pr-12 text-white datetime-input"
-                      placeholder="Select date and time..."
-                      min={getMinDateTime()}
-                      onChange={(e) => handleDateChange(e.target.value)}
-                      data-testid="input-datetime-local"
+          <FormField
+            control={form.control}
+            name="message"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xl font-display font-bold text-[#F8FAFC] glow-text mb-2 block">
+                  Message to the Future
+                </FormLabel>
+                <FormControl>
+                  <div className="relative group">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
+                    <Textarea
+                      placeholder="Write your message..."
+                      className="relative bg-black/50 border-white/10 min-h-[160px] resize-none text-lg p-6 rounded-xl focus:ring-0 focus:border-transparent placeholder:text-muted-foreground/50 text-white shadow-inner"
+                      data-testid="textarea-message"
+                      {...field}
                     />
                   </div>
-                </div>
-              </FormControl>
-              
-              {selectedUtcTime && (
-                <div className="mt-3 p-4 rounded-xl bg-black/30 border border-[#1652F0]/30">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-[#CBD5E1] flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-[#1652F0]" />
-                      Reveal Time (UTC):
-                    </span>
-                    <span className="text-sm font-mono text-[#1652F0] font-semibold">
-                      {formatUTC(selectedUtcTime)}
-                    </span>
-                  </div>
-                  <p className="text-[#CBD5E1]/70 text-xs mt-2">
-                    The capsule will reveal at this UTC time worldwide.
-                  </p>
-                </div>
-              )}
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Button
-            type="submit"
-            disabled={isSubmitting || !canSubmit}
-            className="w-full h-16 text-lg font-bold rounded-xl bg-gradient-to-r from-[#1652F0] to-[#3B82F6] hover:opacity-90 transition-all breathing-button"
-            style={{ boxShadow: "0 0 20px rgba(22, 82, 240, 0.5)" }}
-            data-testid="button-seal-capsule"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Encrypting Time Capsule...
-              </>
-            ) : (
-              <>
-                <img 
-                  src={bottleIcon} 
-                  alt="" 
-                  className="mr-2 h-9 w-9"
-                  style={{ transform: "rotate(45deg)" }}
-                />
-                Seal Capsule
-              </>
+                </FormControl>
+                <FormDescription className="text-[#CBD5E1] flex items-center gap-2 mt-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#1652F0] shadow-[0_0_5px_#1652F0]"></span>
+                  This message will be encrypted until the reveal date.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
             )}
-          </Button>
-        </motion.div>
+          />
 
-        {!identity && (
-          <p className="text-center text-sm text-[#CBD5E1]">
-            Sign in above to seal your capsule.
-          </p>
-        )}
-      </form>
-    </Form>
+          <FormField
+            control={form.control}
+            name="revealDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel className="text-xl font-display font-bold text-[#F8FAFC] glow-text flex items-center gap-3 mb-2">
+                  <Clock className="w-6 h-6 text-[#1652F0] drop-shadow-[0_0_8px_rgba(22,82,240,0.5)]" />
+                  Reveal Date & Time
+                </FormLabel>
+                <FormControl>
+                  <div className="relative group">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
+
+                    <div className="datetime-wrapper relative">
+                      <Input
+                        type="datetime-local"
+                        onKeyDown={(e) => e.preventDefault()}
+                        style={{ colorScheme: 'dark' }} 
+                        className={`
+                          relative bg-black/50 border-white/10 h-14 rounded-xl 
+                          focus:ring-0 focus:border-transparent text-base p-4 pr-12 
+                          cursor-pointer transition-colors duration-300
+                          appearance-none shadow-inner
+                          [&::-webkit-calendar-picker-indicator]:hidden
+                          [&::-webkit-calendar-picker-indicator]:opacity-0
+                          ${selectedUtcTime ? "text-white font-medium" : "text-[#CBD5E1]/40"}
+                        `}
+                        placeholder="Select date and time..."
+                        min={getMinDateTime()}
+                        onChange={(e) => handleDateChange(e.target.value)}
+                        onClick={(e) => e.currentTarget.showPicker && e.currentTarget.showPicker()}
+                        data-testid="input-datetime-local"
+                      />
+
+                      <Calendar 
+                        className={`
+                          absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-300
+                          ${selectedUtcTime ? "text-[#1652F0] drop-shadow-[0_0_5px_rgba(22,82,240,0.5)]" : "text-[#CBD5E1]/30"}
+                        `}
+                        size={20}
+                        strokeWidth={1.5}
+                      />
+                    </div>
+                  </div>
+                </FormControl>
+
+                {selectedUtcTime && !isNaN(selectedUtcTime.getTime()) && (
+                  <div className="mt-3 p-4 rounded-xl bg-black/30 border border-[#1652F0]/30 backdrop-blur-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[#CBD5E1] flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-[#1652F0]" />
+                        Reveal Time (UTC):
+                      </span>
+                      <span className="text-sm font-mono text-white font-bold drop-shadow-md">
+                        {formatUTC(selectedUtcTime)}
+                      </span>
+                    </div>
+                    <p className="text-[#CBD5E1]/70 text-xs mt-2 pl-6">
+                      The capsule will reveal at this UTC time worldwide.
+                    </p>
+                  </div>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Button
+              type="submit"
+              disabled={isSubmitting || !canSubmit}
+              className="w-full h-24 text-3xl font-bold rounded-xl bg-gradient-to-r from-[#1652F0] to-[#3B82F6] hover:opacity-90 transition-all breathing-button flex items-center justify-center"
+              style={{ boxShadow: "0 0 30px rgba(22, 82, 240, 0.7)" }}
+              data-testid="button-seal-capsule"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+                  Encrypting...
+                </>
+              ) : (
+                <>
+                  <img 
+                    src={bottleIcon} 
+                    alt="" 
+                    className="mr-1 h-20 w-auto"
+                    style={{ 
+                      filter: "drop-shadow(0 0 5px #ffffff) drop-shadow(0 0 20px #3B82F6) drop-shadow(0 0 40px #1652F0) drop-shadow(0 0 60px rgba(59, 130, 246, 0.5))"
+                    }}
+                  />
+                  Seal Capsule
+                </>
+              )}
+            </Button>
+          </motion.div>
+
+          {!identity && (
+            <p className="text-center text-sm text-[#CBD5E1]">
+              Sign in above to seal your capsule.
+            </p>
+          )}
+        </form>
+      </Form>
+    </div>
   );
 }

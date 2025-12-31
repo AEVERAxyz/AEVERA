@@ -35,7 +35,8 @@ export function ArchiveTable() {
       if (!res.ok) throw new Error("Failed to fetch archive");
       return res.json();
     },
-    refetchInterval: 30000,
+    // HIER IST DIE MAGIE: Alle 2 Sekunden aktualisieren für "Live"-Gefühl
+    refetchInterval: 2000, 
   });
 
   const handleSearch = () => {
@@ -97,10 +98,13 @@ export function ArchiveTable() {
             No capsules found. Be the first to send a message to the future!
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[#1652F0]/40">
+          /* HIER SIND DIE SCROLL-ÄNDERUNGEN */
+          /* max-h-[400px] begrenzt die Höhe. overflow-y-auto erlaubt Scrollen. */
+          <div className="overflow-x-auto overflow-y-auto max-h-[400px] custom-scrollbar pr-2">
+            <table className="w-full border-collapse relative">
+              <thead className="sticky top-0 z-10">
+                {/* Hintergrundfarbe für den Header, damit man den Text dahinter nicht sieht */}
+                <tr className="border-b border-[#1652F0]/40 bg-[#0A0F1E]"> 
                   <th className="text-left py-3 px-2 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
                     Author
                   </th>
@@ -122,16 +126,16 @@ export function ArchiveTable() {
                 {data.capsules.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b border-[#1652F0]/20 bg-transparent hover:bg-[#1652F0]/5 transition-colors cursor-pointer"
+                    className="border-b border-[#1652F0]/20 bg-transparent hover:bg-[#1652F0]/5 transition-colors cursor-pointer group"
                     data-testid={`row-capsule-${item.id}`}
                     onClick={() => window.location.href = `/capsule/${item.id}`}
                   >
                     <td className="py-3 px-2">
-                      <span className="text-[#F8FAFC] font-medium">
+                      <span className="text-[#F8FAFC] font-medium group-hover:text-white transition-colors">
                         {item.author}
                       </span>
                       {item.authorAddress && !item.author.includes(".eth") && (
-                        <p className="text-xs text-[#CBD5E1]/60">
+                        <p className="text-xs text-[#CBD5E1]/60 font-mono mt-0.5">
                           {formatAddress(item.authorAddress)}
                         </p>
                       )}
@@ -146,7 +150,7 @@ export function ArchiveTable() {
                       {item.status === "revealed" ? (
                         <Badge
                           variant="outline"
-                          className="border-cyan-500/50 bg-cyan-500/20 text-cyan-400 glow-cyan"
+                          className="border-cyan-500/50 bg-cyan-500/10 text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.2)]"
                         >
                           <Unlock className="w-3 h-3 mr-1" />
                           Revealed
@@ -154,7 +158,7 @@ export function ArchiveTable() {
                       ) : (
                         <Badge
                           variant="outline"
-                          className="border-indigo-500/50 bg-indigo-500/20 text-indigo-400 glow-indigo"
+                          className="border-indigo-500/50 bg-indigo-500/10 text-indigo-400"
                         >
                           <Lock className="w-3 h-3 mr-1" />
                           Locked
@@ -167,7 +171,7 @@ export function ArchiveTable() {
                           href={`https://zora.co/collect/base:${item.transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[#6366F1] hover:underline text-sm font-medium"
+                          className="inline-flex items-center gap-1 text-[#6366F1] hover:text-[#818cf8] hover:underline text-sm font-medium transition-colors"
                           style={{ textShadow: "0 0 8px rgba(99, 102, 241, 0.4)" }}
                           data-testid={`link-nft-${item.id}`}
                         >
@@ -177,7 +181,7 @@ export function ArchiveTable() {
                           View NFT <ExternalLink className="w-3 h-3" />
                         </a>
                       ) : item.status === "revealed" ? (
-                        <span className="text-xs text-[#CBD5E1]/60">
+                        <span className="text-xs text-[#CBD5E1]/60 italic">
                           Not minted
                         </span>
                       ) : (
