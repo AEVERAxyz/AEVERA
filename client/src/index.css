@@ -1,42 +1,43 @@
+/* 1. Schriftarten-Import MUSS ganz oben stehen */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* 2. Tailwind Direktiven - Unverzichtbar für OnchainKit */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* 3. Deine Design-Variablen */
 :root {
   --font-display: 'Space Grotesk', sans-serif;
   --font-body: 'Inter', sans-serif;
 
-  /* Midnight Base Blue Theme - Deep, Sophisticated */
+  /* Midnight Base Blue Theme */
   --background: 220 30% 4%;
   --foreground: 0 0% 88%;
-  
-  /* Midnight Base Blue - deeper, more sophisticated */
+
   --primary: 221 70% 35%;
   --primary-foreground: 0 0% 88%;
-  
+
   --secondary: 220 25% 12%;
   --secondary-foreground: 0 0% 88%;
-  
+
   --muted: 220 20% 10%;
   --muted-foreground: 220 10% 55%;
-  
-  /* Azure accent - subtle complement */
+
   --accent: 210 80% 45%;
   --accent-foreground: 0 0% 88%;
-  
-  /* Subtle orange for errors instead of aggressive red */
+
   --destructive: 30 80% 50%;
   --destructive-foreground: 30 90% 85%;
-  
+
   --border: 220 20% 15%;
   --input: 220 20% 12%;
   --ring: 221 70% 35%;
-  
+
   --radius: 0.5rem;
 }
 
+/* 4. Basis-Styles */
 @layer base {
   * {
     @apply border-border;
@@ -49,7 +50,7 @@
     background-attachment: fixed;
     min-height: 100vh;
   }
-  
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     @apply tracking-tight font-bold;
@@ -57,6 +58,7 @@
   }
 }
 
+/* 5. Custom Komponenten & Animationen */
 .glass-card {
   background: rgba(13, 25, 48, 0.8);
   backdrop-filter: blur(20px);
@@ -64,7 +66,6 @@
   box-shadow: 0 0 15px rgba(22, 82, 240, 0.3);
 }
 
-/* Breathing animation for logo and buttons */
 @keyframes breathing {
   0%, 100% {
     transform: scale(1);
@@ -88,7 +89,6 @@
   text-shadow: 0 0 20px rgba(22, 82, 240, 0.5), 0 0 40px rgba(22, 82, 240, 0.3);
 }
 
-/* Status badge glows */
 .glow-green {
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
 }
@@ -101,7 +101,6 @@
   box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
 }
 
-/* Parchment/Scroll Card */
 .parchment-card {
   background: linear-gradient(135deg, 
     rgba(251, 191, 36, 0.08) 0%, 
@@ -113,13 +112,11 @@
     0 0 40px rgba(251, 191, 36, 0.1);
 }
 
-/* DateTime Input - Custom White Calendar Icon */
 .datetime-input {
   color-scheme: dark;
   position: relative;
 }
 
-/* Hide default calendar icon and replace with custom SVG */
 .datetime-input::-webkit-calendar-picker-indicator {
   opacity: 0;
   position: absolute;
@@ -130,7 +127,6 @@
   z-index: 10;
 }
 
-/* Custom calendar icon using CSS */
 .datetime-wrapper {
   position: relative;
 }
@@ -150,7 +146,6 @@
   z-index: 5;
 }
 
-/* Midnight Base Blue Neon Glow Effects - Subtle */
 .neon-glow {
   box-shadow: 
     0 0 15px rgba(30, 60, 140, 0.3),
@@ -172,7 +167,6 @@
     0 0 60px rgba(30, 60, 140, 0.1);
 }
 
-/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -183,17 +177,14 @@
   @apply bg-primary/20 rounded-full hover:bg-primary/40 transition-colors;
 }
 
-/* Subtle Error Message Styling */
 .error-message {
   @apply text-orange-400 border border-orange-400/30 rounded-lg px-3 py-2 text-sm bg-transparent;
 }
 
-/* Form error styling override */
 [data-slot="form-message"] {
   color: #E89B5A !important;
 }
 
-/* Soft text utility */
 .text-soft {
   color: #E0E0E0;
 }

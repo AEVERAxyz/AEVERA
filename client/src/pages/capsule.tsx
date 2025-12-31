@@ -1,14 +1,19 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Lock, Unlock, Clock, ExternalLink, Sparkles, Copy, Check, Share2, Loader2 } from "lucide-react";
+import { Lock, ExternalLink, Sparkles, Copy, Check, Loader2, Camera } from "lucide-react";
+import { SiFarcaster } from "react-icons/si";
 import logoImage from "@assets/logo_final_1767063482143.png";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
-import { queryClient } from "@/lib/queryClient";
-import { Footer } from "@/components/Footer"; // WICHTIG: Der neue Import!
+import { Footer } from "@/components/Footer";
+import QRCode from "react-qr-code";
+import html2canvas from "html2canvas";
+
+// WALLET IMPORTS (EthQrCode entfernt für maximale Stabilität)
+import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
+import { Address, Avatar, Name, Identity } from '@coinbase/onchainkit/identity';
 
 interface CapsuleData {
   id: string;
@@ -25,8 +30,18 @@ interface CapsuleData {
   sealerAddress?: string;
 }
 
-interface Props {
-  id: string;
+interface Props { id: string; }
+
+function formatTechnicalDate(dateString: string): string {
+    const d = new Date(dateString);
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${date} • ${time} UTC`;
+}
+
+function formatSimpleDate(dateString: string): string {
+    const d = new Date(dateString);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatUTC(date: Date): string {
@@ -88,66 +103,82 @@ function CountdownTimer({ targetDate }: { targetDate: Date }) {
   );
 }
 
-function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt }: any) {
+function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsuleId, cardRef }: any) {
+  const capsuleUrl = `${window.location.origin}/capsule/${capsuleId}`;
+
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative">
-      <div className="absolute -inset-2 bg-gradient-to-br from-[#1652F0]/30 via-[#3B82F6]/20 to-[#1652F0]/30 rounded-2xl blur-xl"></div>
-      <div className="relative bg-black/60 border border-[#1652F0]/40 rounded-2xl p-8 md:p-12 overflow-hidden">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1652F0] to-[#3B82F6] flex items-center justify-center shadow-[0_0_15px_rgba(22,82,240,0.5)]">
-            <Unlock className="w-5 h-5 text-white" />
+    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative max-w-xl mx-auto" ref={cardRef}>
+      <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/30 via-blue-600/30 to-purple-600/30 rounded-2xl blur-xl"></div>
+      <div className="relative bg-[#020617]/95 border border-[#1652F0]/50 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        <div className="h-1.5 w-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600"></div>
+
+        <div className="px-6 py-3 relative flex-1 flex flex-col">
+          <div className="flex items-center justify-start gap-3 mb-2 border-b border-white/10 pb-2 mt-1">
+             <div className="flex-shrink-0">
+               <img src={logoImage} alt="TC" className="w-16 h-auto drop-shadow-[0_0_20px_rgba(22,82,240,0.5)]" />
+             </div>
+             <div className="flex flex-col items-center justify-center">
+                <span className="title-fix font-display font-bold text-white text-3xl tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] leading-none">TimeCapsule</span>
+                <span className="subtitle-fix text-[10px] text-[#3B82F6] uppercase tracking-[0.22em] font-bold shadow-blue-500/20 drop-shadow-sm mt-1 whitespace-nowrap">A Message to the Future</span>
+             </div>
           </div>
-          <h3 className="text-lg font-display font-bold text-[#F8FAFC]">Message Revealed</h3>
-        </div>
-        <p className="text-sm text-[#CBD5E1] mb-4 italic">
-          {sealerIdentity || 'Someone'} wrote on {formatUTC(new Date(sealedAt))} for {formatUTC(new Date(revealedAt))}:
-        </p>
-        <div className="prose prose-invert max-w-none">
-          <p className="text-lg md:text-xl leading-relaxed text-[#F8FAFC]/90 font-light whitespace-pre-wrap">{message}</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2 text-xs font-mono">
+              <div className="bg-black/40 p-3 rounded-lg border border-white/5 group hover:border-white/10 transition-colors">
+                  <span className="block text-slate-500 uppercase text-[9px] mb-0.5 tracking-widest">Origin Identity</span>
+                  <div className="meta-text-fix text-white font-bold text-xs truncate h-7 flex items-center">{sealerIdentity || 'Anonymous'}</div>
+              </div>
+              <div className="bg-black/40 p-3 rounded-lg border border-white/5 group hover:border-white/10 transition-colors">
+                  <span className="block text-slate-500 uppercase text-[9px] mb-0.5 tracking-widest">Capsule ID</span>
+                  <div className="meta-text-fix text-cyan-400 font-mono text-[9px] truncate h-7 flex items-center drop-shadow-[0_0_3px_rgba(34,211,238,0.3)]">{capsuleId}</div>
+              </div>
+              <div className="bg-black/40 p-3 rounded-lg border border-white/5">
+                  <span className="block text-slate-500 uppercase text-[9px] mb-0.5 tracking-widest">Sealed At</span>
+                  <div className="meta-text-fix text-slate-200 shadow-white/10 drop-shadow-sm text-[10px] h-7 flex items-center">{formatTechnicalDate(sealedAt)}</div>
+              </div>
+              <div className="bg-black/40 p-3 rounded-lg border border-white/5">
+                  <span className="block text-slate-500 uppercase text-[9px] mb-0.5 tracking-widest">Revealed At</span>
+                  <div className="meta-text-fix text-emerald-400 shadow-emerald-400/20 drop-shadow-sm text-[10px] h-7 flex items-center">{formatTechnicalDate(revealedAt)}</div>
+              </div>
+          </div>
+
+          <div className="relative bg-gradient-to-b from-black/60 to-black/40 p-5 rounded-xl border border-white/10 mb-2 h-[280px] overflow-y-auto flex flex-col">
+             <div className="intro-text-fix text-[10px] text-slate-300 font-mono mb-6 text-left w-full leading-relaxed border-b border-white/5 pb-2">
+                {sealerIdentity || 'Anonymous'} wrote this message on {formatSimpleDate(sealedAt)} to the future on {formatSimpleDate(revealedAt)}.
+             </div>
+
+             <div className="flex-1 flex items-center justify-center relative px-4">
+                <span className="absolute -top-2 -left-1 text-5xl text-cyan-500/30 font-serif drop-shadow-[0_0_10px_rgba(6,182,212,0.2)]">"</span>
+                <p className="relative z-10 text-xl leading-relaxed text-white font-serif font-light whitespace-pre-wrap text-center">{message}</p>
+                <span className="absolute -bottom-4 -right-1 text-5xl text-purple-500/30 font-serif rotate-180 drop-shadow-[0_0_10px_rgba(168,85,247,0.2)]">"</span>
+             </div>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-white/10 pt-3 mt-auto mb-1">
+             <div className="text-[9px] text-slate-300 uppercase tracking-widest space-y-1 font-medium">
+                 <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_5px_rgba(59,130,246,0.8)]"></div><p className="footer-text-fix">Immutable Record</p></div>
+                 <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-purple-500 rounded-full shadow-[0_0_5px_rgba(168,85,247,0.8)]"></div><p className="footer-text-fix">Secured on Base</p></div>
+                 <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_5px_rgba(255,255,255,0.8)]"></div><p className="footer-text-fix">Verifiable Content</p></div>
+             </div>
+             <div className="flex items-center gap-3">
+                <span className="scan-text-fix text-[8px] text-slate-500 uppercase tracking-widest whitespace-nowrap">Scan to Verify</span>
+                <div className="p-1 rounded-lg border border-white/10 bg-black/40 shadow-lg">
+                    <div style={{ height: "auto", margin: "0 auto", maxWidth: 48, width: "100%" }}>
+                        <QRCode size={256} style={{ height: "auto", maxWidth: "100%", width: "100%" }} value={capsuleUrl} viewBox={`0 0 256 256`} bgColor="transparent" fgColor="#FFFFFF" />
+                    </div>
+                </div>
+             </div>
+          </div>
         </div>
       </div>
     </motion.div>
   );
 }
 
-function ZoraMintSection({ capsule, currentUserAddress, onMintSuccess }: any) {
-  const { toast } = useToast();
-  const isAuthor = currentUserAddress && capsule.sealerAddress && 
-                   currentUserAddress.toLowerCase() === capsule.sealerAddress.toLowerCase();
-
-  if (capsule.isMinted) return (
-    <div className="pt-6 border-t border-[#1652F0]/30 text-center">
-      <Button className="w-full h-14 bg-gradient-to-r from-green-600 to-emerald-600" asChild>
-        <a href={`https://zora.co/collect/base:${capsule.transactionHash}`} target="_blank"><ExternalLink className="mr-2 h-5 w-5" /> View on Zora</a>
-      </Button>
-    </div>
-  );
-
-  return (
-    <div className="pt-6 border-t border-[#1652F0]/30">
-      {!isAuthor ? (
-        <div className="w-full h-14 rounded-xl bg-purple-900/20 border border-purple-500/30 flex items-center justify-center text-[#CBD5E1]/60 italic">
-          <Sparkles className="mr-2 h-5 w-5 opacity-50" /> Author-Only Minting
-        </div>
-      ) : (
-        <Button onClick={() => window.open(`https://zora.co/create?name=TimeCapsule`, '_blank')} className="w-full h-14 bg-[#6366F1] hover:bg-[#5558E3] shadow-[0_0_20px_rgba(99,102,241,0.4)]">
-          <Sparkles className="mr-2 h-5 w-5" /> Mint on Zora
-        </Button>
-      )}
-      <p className="text-center text-xs text-[#CBD5E1]/50 mt-3">Only the capsule author can mint this message as an NFT.</p>
-    </div>
-  );
-}
-
-export default function CapsulePage({ id }: Props) {
-  const { toast } = useToast();
+export default function CapsulePage({ id }: { id: string }) {
   const [hasCopied, setHasCopied] = useState(false);
-  const [currentUserAddress, setCurrentUserAddress] = useState<string | null>(null);
-
-  useEffect(() => {
-    const storedWallet = localStorage.getItem("wallet_address");
-    if (storedWallet) setCurrentUserAddress(storedWallet);
-  }, []);
+  const cardRef = useRef<HTMLDivElement>(null); 
+  const { toast } = useToast();
 
   const { data: capsule, isLoading }: any = useQuery({ 
     queryKey: ['/api/capsules', id], 
@@ -156,32 +187,71 @@ export default function CapsulePage({ id }: Props) {
 
   const capsuleUrl = `${window.location.origin}/capsule/${id}`;
 
-  if (isLoading || !capsule) return <div className="min-h-screen flex items-center justify-center bg-black text-white">Loading...</div>;
+  if (isLoading || !capsule) return <div className="min-h-screen flex items-center justify-center bg-[#050A15] text-blue-400"><Loader2 className="animate-spin w-10 h-10" /></div>;
+
+  const handleDownloadImage = async () => {
+    if (!cardRef.current) return;
+    try {
+        const canvas = await html2canvas(cardRef.current, {
+            backgroundColor: "#020617",
+            scale: 2,
+            useCORS: true,
+            onclone: (clonedDoc) => {
+                const title = clonedDoc.querySelector('.title-fix') as HTMLElement;
+                if (title) { title.style.filter = 'none'; title.style.textShadow = '0 0 15px rgba(255,255,255,0.5)'; title.style.marginTop = '-10px'; }
+                const subtitle = clonedDoc.querySelector('.subtitle-fix') as HTMLElement;
+                if (subtitle) { subtitle.style.filter = 'none'; subtitle.style.textShadow = '0 0 2px rgba(59, 130, 246, 0.5)'; subtitle.style.marginTop = '5px'; }
+                const intro = clonedDoc.querySelector('.intro-text-fix') as HTMLElement;
+                if(intro) intro.style.marginTop = '-12px'; 
+                const metas = clonedDoc.querySelectorAll('.meta-text-fix');
+                metas.forEach((el) => (el as HTMLElement).style.marginTop = '-10px'); 
+                const footerTexts = clonedDoc.querySelectorAll('.footer-text-fix');
+                footerTexts.forEach((el) => { (el as HTMLElement).style.marginTop = '-9px'; });
+                const scanText = clonedDoc.querySelector('.scan-text-fix') as HTMLElement;
+                if (scanText) { scanText.style.marginTop = '-9px'; scanText.style.display = 'block'; }
+            }
+        });
+        const link = document.createElement('a');
+        link.download = `timecapsule-${capsule.id.slice(0,8)}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+    } catch (err) { console.error("Snapshot failed:", err); }
+  };
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center p-4 md:p-8 bg-[#050A15] relative overflow-x-hidden">
+
+      {/* WALLET INTEGRATION */}
+      <div className="w-full max-w-5xl flex justify-end mb-4 z-50">
+        <Wallet>
+          <ConnectWallet className="bg-[#1652F0] hover:bg-[#0039CB] text-white rounded-xl px-4 py-2 flex items-center gap-2">
+            <Avatar className="h-6 w-6" />
+            <Name />
+          </ConnectWallet>
+          <WalletDropdown>
+            <Identity className="px-4 pt-3 pb-2 bg-[#050A15] border border-white/10" hasCopyAddressOnClick>
+              <Avatar />
+              <Name />
+              <Address />
+            </Identity>
+            <WalletDropdownDisconnect className="hover:bg-red-500/10 text-red-500" />
+          </WalletDropdown>
+        </Wallet>
+      </div>
+
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#1652F0]/10 rounded-full blur-[120px]" />
       </div>
 
-      <main className="w-full max-w-3xl flex-1 flex flex-col">
-        {/* HEADER */}
+      <main className="w-full max-w-3xl flex-1 flex flex-col mt-4 md:mt-8">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
           <Link href="/">
             <div className="flex flex-col items-center cursor-pointer group">
               <img src={logoImage} className="h-[105px] w-auto mb-[-8px] drop-shadow-[0_0_20px_rgba(22,82,240,0.6)] group-hover:scale-105 transition-transform" />
-
               <h1 className="text-4xl font-extrabold text-white tracking-tighter glow-text leading-none mb-1">TimeCapsule</h1>
-
               <div className="w-[218px] border-t border-[#1652F0]/30 pt-2 flex flex-col items-center">
-                <p className="text-[12px] text-[#CBD5E1] uppercase font-medium whitespace-nowrap text-center"
-                   style={{ letterSpacing: '0.076em', marginRight: '-0.076em' }}>
-                  Send a message to the future
-                </p>
-                <p className="text-[10px] text-[#1652F0] uppercase font-extrabold whitespace-nowrap text-center mt-1.5"
-                   style={{ letterSpacing: '0.14em', marginRight: '-0.14em' }}>
-                  Mint it as an NFT when revealed
-                </p>
+                <p className="text-[12px] text-[#CBD5E1] uppercase font-medium whitespace-nowrap text-center" style={{ letterSpacing: '0.076em', marginRight: '-0.076em' }}>Send a message to the future</p>
+                <p className="text-[10px] text-[#1652F0] uppercase font-extrabold whitespace-nowrap text-center mt-1.5" style={{ letterSpacing: '0.14em', marginRight: '-0.14em' }}>Mint it as an NFT when revealed</p>
               </div>
             </div>
           </Link>
@@ -190,12 +260,23 @@ export default function CapsulePage({ id }: Props) {
         <div className="glass-card rounded-3xl p-6 md:p-10 border border-[#1652F0]/30 shadow-[0_0_30px_rgba(22,82,240,0.15)] bg-black/40">
           {capsule.isRevealed ? (
             <div className="space-y-8">
-              <RevealedMessage message={capsule.decryptedContent} sealerIdentity={capsule.sealerIdentity} sealedAt={capsule.createdAt} revealedAt={capsule.revealDate} />
-              <ZoraMintSection capsule={capsule} currentUserAddress={currentUserAddress} onMintSuccess={() => {}} />
+              <RevealedMessage 
+                 message={capsule.decryptedContent} 
+                 sealerIdentity={capsule.sealerIdentity} 
+                 sealedAt={capsule.createdAt} 
+                 revealedAt={capsule.revealDate} 
+                 capsuleId={capsule.id}
+                 cardRef={cardRef} 
+              />
+              <div className="pt-6 border-t border-[#1652F0]/30">
+                <Button onClick={handleDownloadImage} className="w-full h-14 bg-[#6366F1] hover:bg-[#5558E3] shadow-[0_0_20px_rgba(99,102,241,0.4)] text-white font-bold rounded-xl text-lg">
+                  <Camera className="mr-2 h-5 w-5" /> 📸 Test: Download Image
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-8 text-center">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-[#1652F0]/10 rounded-full ring-2 ring-[#1652F0]/30">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-[#1652F0]/10 rounded-full ring-2 ring-[#1652F0]/30 animate-pulse">
                 <Lock className="w-10 h-10 text-[#1652F0]" />
               </div>
               <h2 className="text-3xl font-bold text-white glow-text">Capsule Locked</h2>
@@ -209,22 +290,17 @@ export default function CapsulePage({ id }: Props) {
 
           <div className="mt-8 pt-6 border-t border-[#1652F0]/30 space-y-4">
              <div className="bg-black/60 p-3 rounded-lg border border-[#1652F0]/20 flex items-center gap-2">
-                <a href={capsuleUrl} target="_blank" className="text-sm text-[#1652F0] truncate hover:underline flex-1 font-mono">{capsuleUrl}</a>
-                <Button size="icon" variant="ghost" onClick={() => { navigator.clipboard.writeText(capsuleUrl); setHasCopied(true); setTimeout(() => setHasCopied(false), 2000); }}>
-                  {hasCopied ? <Check className="text-green-400 w-4 h-4" /> : <Copy className="w-4 h-4 text-[#CBD5E1]" />}
-                </Button>
+                <div className="text-sm text-[#1652F0] truncate flex-1 font-mono pl-2 opacity-80">{capsuleUrl}</div>
+                <Button size="icon" variant="ghost" onClick={() => { navigator.clipboard.writeText(capsuleUrl); setHasCopied(true); setTimeout(() => setHasCopied(false), 2000); }} className="hover:bg-white/10 hover:text-white text-[#CBD5E1]">{hasCopied ? <Check className="text-green-400 w-4 h-4" /> : <Copy className="w-4 h-4" />}</Button>
              </div>
              <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" onClick={() => window.open(`https://warpcast.com/~/compose?text=Check out this TimeCapsule&embeds[]=${capsuleUrl}`)}><Share2 className="mr-2 w-4 h-4" /> Share</Button>
-                <Link href="/"><Button className="w-full bg-white text-black">Create New</Button></Link>
+                <Button variant="outline" className="border-[#855DCD]/30 hover:bg-[#855DCD]/10 text-white gap-2 h-12 rounded-xl" onClick={() => window.open(`https://warpcast.com/~/compose?text=Witness the message from the past!&embeds[]=${encodeURIComponent(capsuleUrl)}`, '_blank')}><SiFarcaster className="w-4 h-4 text-[#855DCD]" /> Share on Warpcast</Button>
+                <Link href="/"><Button variant="ghost" className="w-full h-12 border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl">Create New</Button></Link>
              </div>
           </div>
         </div>
       </main>
-
-      {/* Hier ist der neue, einheitliche Footer */}
       <Footer />
-
     </div>
   );
 }
