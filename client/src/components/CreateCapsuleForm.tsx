@@ -159,14 +159,11 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
     form.setValue('revealDate', localDate, { shouldValidate: true, shouldDirty: true });
   };
 
+  // Hilfsvariable für die Button-Logik
   const canSubmit = identity && form.formState.isDirty;
 
   return (
     <div className="space-y-8">
-      {/* WICHTIG: Das Modul bleibt VOR dem Formular.
-         Das ist kein "Hack", sondern saubere Programmierung, 
-         damit sich Buttons nicht gegenseitig stören.
-      */}
       <IdentityModule identity={identity} onIdentityChange={setIdentity} />
 
       <Form {...form}>
@@ -214,13 +211,14 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-accent to-primary rounded-xl blur opacity-20 group-focus-within:opacity-50 transition duration-500"></div>
 
                     <div className="datetime-wrapper relative">
+                      {/* UPDATE: h-16 für mehr Höhe, px-6 für mehr Abstand, text-lg für bessere Lesbarkeit */}
                       <Input
                         type="datetime-local"
                         onKeyDown={(e) => e.preventDefault()}
                         style={{ colorScheme: 'dark' }} 
                         className={`
-                          relative bg-black/50 border-white/10 h-14 rounded-xl 
-                          focus:ring-0 focus:border-transparent text-base p-4 pr-12 
+                          relative bg-black/50 border-white/10 h-16 rounded-xl 
+                          focus:ring-0 focus:border-transparent text-lg px-6 pr-12 
                           cursor-pointer transition-colors duration-300
                           appearance-none shadow-inner
                           [&::-webkit-calendar-picker-indicator]:hidden
@@ -236,10 +234,10 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
 
                       <Calendar 
                         className={`
-                          absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-300
+                          absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-300
                           ${selectedUtcTime ? "text-[#1652F0] drop-shadow-[0_0_5px_rgba(22,82,240,0.5)]" : "text-[#CBD5E1]/30"}
                         `}
-                        size={20}
+                        size={24} // Etwas größer
                         strokeWidth={1.5}
                       />
                     </div>
@@ -268,14 +266,24 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           />
 
           <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={identity ? { scale: 1.02 } : {}}
+            whileTap={identity ? { scale: 0.98 } : {}}
           >
+            {/* UPDATE: Dynamische Klassen für den Button.
+               Wenn !identity (nicht eingeloggt): Grau, dunkel, keine Schatten.
+               Wenn identity (eingeloggt): Blau, Verlauf, Schatten.
+            */}
             <Button
               type="submit"
               disabled={isSubmitting || !canSubmit}
-              className="w-full h-24 text-3xl font-bold rounded-xl bg-gradient-to-r from-[#1652F0] to-[#3B82F6] hover:opacity-90 transition-all breathing-button flex items-center justify-center"
-              style={{ boxShadow: "0 0 30px rgba(22, 82, 240, 0.7)" }}
+              className={`
+                w-full h-24 text-3xl font-bold rounded-xl flex items-center justify-center transition-all duration-300
+                ${!identity 
+                   ? "bg-slate-800/50 text-slate-500 cursor-not-allowed border border-white/5 opacity-70" 
+                   : "bg-gradient-to-r from-[#1652F0] to-[#3B82F6] hover:opacity-90 breathing-button text-white"
+                }
+              `}
+              style={identity ? { boxShadow: "0 0 30px rgba(22, 82, 240, 0.7)" } : {}}
               data-testid="button-seal-capsule"
             >
               {isSubmitting ? (
@@ -288,10 +296,10 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
                   <img 
                     src={bottleIcon} 
                     alt="" 
-                    className="mr-1 h-20 w-auto"
-                    style={{ 
+                    className={`mr-1 h-20 w-auto transition-all duration-300 ${!identity ? "grayscale opacity-50" : ""}`}
+                    style={identity ? { 
                       filter: "drop-shadow(0 0 5px #ffffff) drop-shadow(0 0 20px #3B82F6) drop-shadow(0 0 40px #1652F0) drop-shadow(0 0 60px rgba(59, 130, 246, 0.5))"
-                    }}
+                    } : {}}
                   />
                   Seal Capsule
                 </>
@@ -300,8 +308,8 @@ export function CreateCapsuleForm({ onSuccess }: Props) {
           </motion.div>
 
           {!identity && (
-            <p className="text-center text-sm text-[#CBD5E1]">
-              Sign in above to seal your capsule.
+            <p className="text-center text-sm text-[#CBD5E1] animate-pulse">
+              Please sign in above to activate the seal mechanism.
             </p>
           )}
         </form>
