@@ -49,8 +49,8 @@ declare global {
   }
 }
 
-// Deine Client ID fest eingetragen
-const NEYNAR_CLIENT_ID = "4e8fc6b3-c3fe-49e6-b1bd-a5b5f3e7d593"; 
+// Wir behalten die funktionierende ID fest im Code!
+const NEYNAR_CLIENT_ID = "4e8fc6b3-c3fe-49e6-b1bd-a5b5f3e7d593";
 
 async function resolveEnsName(address: string): Promise<string | null> {
   try {
@@ -280,7 +280,9 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
         <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-accent/20 rounded-xl blur opacity-20"></div>
         <div className="relative bg-black/50 border border-white/10 rounded-xl p-6 text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-          <p className="mt-3 text-soft-muted">Signing in...</p>
+          <p className="mt-3 text-soft-muted">
+            {loadingType === "farcaster" ? "Signing in with Farcaster..." : "Connecting wallet..."}
+          </p>
         </div>
       </div>
     );
@@ -319,7 +321,6 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
                 <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-soft-muted hover:text-soft" type="button">Sign Out</Button>
               </div>
             </div>
-            {/* Identity Select Dropdown */}
             <div className="border-t border-[#1652F0]/30 pt-4">
               <label className="text-sm text-[#1652F0] mb-2 block font-medium">Post as:</label>
               <Select value={selectedIdentity} onValueChange={handleIdentitySelect}>
@@ -342,7 +343,6 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
     );
   }
 
-  // Wallet View
   if (walletAddress) {
     const baseName = walletAddress.toLowerCase().includes("ada0") ? "gelassen.base.eth" : null;
     const walletIdentityOptions = [];
@@ -352,17 +352,57 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
 
     return (
       <div className="relative group">
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#0052FF]/20 to-[#1652F0]/20 rounded-xl blur opacity-20"></div>
         <div className="relative bg-black/50 border border-[#1652F0]/30 rounded-xl p-4">
-           {/* Einfacher Wallet View (gekürzt für Übersicht) */}
-           <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleDisconnect} type="button">Disconnect</Button>
-           </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-full bg-[#0052FF] flex items-center justify-center">
+                    <BaseLogo className="w-6 h-6" />
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#0052FF] rounded-full flex items-center justify-center border-2 border-black">
+                    <BaseLogo className="w-3 h-3" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-[#CBD5E1] uppercase tracking-wider flex items-center gap-1">
+                    <BaseLogo className="w-3 h-3" />
+                    Signed in as
+                  </p>
+                  <p className="text-lg font-display font-bold text-[#F8FAFC]">{baseName || walletEns || "Anonymous"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-soft-muted hover:text-soft" type="button">Disconnect</Button>
+              </div>
+            </div>
+            <div className="border-t border-[#1652F0]/30 pt-4">
+              <label className="text-sm text-[#1652F0] mb-2 block font-medium">Post as:</label>
+              <Select value={walletSelectedIdentity} onValueChange={(val) => {
+                  setWalletSelectedIdentity(val);
+                  let displayName = "Anonymous";
+                  if (val === "base") displayName = baseName || "";
+                  else if (val === "ens") displayName = walletEns || "";
+                  onIdentityChange({ type: "wallet", displayName, address: walletAddress });
+                }}>
+                <SelectTrigger className="w-full bg-black/30 border-[#1652F0]/30 text-[#F8FAFC]">
+                  <SelectValue placeholder="Select identity" />
+                </SelectTrigger>
+                <SelectContent className="bg-black/90 border-[#1652F0]/30">
+                  {walletIdentityOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // LOGIN VIEW - DEBUG MODE
   return (
     <div className="space-y-4">
       <div className="relative group">
@@ -374,12 +414,10 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
           <h3 className="text-lg font-display font-bold text-soft mb-2">Connect Your Identity</h3>
           <p className="text-sm text-soft-muted mb-6">Sign in to seal the capsule with your identity.</p>
 
-          <div className="space-y-3 flex flex-col items-center">
+          <div className="space-y-3">
 
-            {/* === DEBUG: Der echte Neynar Button === */}
-            {/* Wir machen ihn sichtbar (kein hidden/opacity-0) und geben ihm einen roten Rahmen */}
-            <div className="w-full flex justify-center p-2 border border-red-500/50 rounded mb-2 bg-red-500/10">
-              <p className="text-xs text-red-300 mb-1 w-full">TEST: Original Neynar Button 👇</p>
+            {/* HIER IST DER TRICK: Wir rendern den echten Neynar-Button, aber unsichtbar (opacity-0) */}
+            <div className="absolute top-0 left-0 w-0 h-0 opacity-0 overflow-hidden pointer-events-none z-[-1]">
               <div 
                 className="neynar_signin"
                 data-client_id={NEYNAR_CLIENT_ID}
@@ -387,13 +425,44 @@ export function IdentityModule({ onIdentityChange, identity }: Props) {
                 data-theme="dark"
               />
             </div>
-            {/* ==================================== */}
 
-            <Button type="button" variant="outline" className="w-full h-12 border-[#0052FF]/30 bg-[#0052FF]/10 text-soft gap-2" onClick={connectCoinbaseWallet}>
-              <BaseLogo className="w-5 h-5" /> Sign in with Base Wallet
+            <Button
+              type="button" 
+              variant="outline"
+              className="w-full h-12 border-[#0052FF]/30 bg-[#0052FF]/10 text-soft gap-2"
+              onClick={connectCoinbaseWallet}
+              data-testid="button-wallet-login"
+            >
+              <BaseLogo className="w-5 h-5" />
+              Sign in with Base Wallet
+            </Button>
+
+            <Button
+              type="button" 
+              variant="outline"
+              className="w-full h-12 border-purple-500/30 bg-purple-500/10 text-soft gap-2"
+              onClick={(e) => {
+                e.preventDefault(); 
+                // Wir suchen den versteckten Knopf und klicken ihn
+                const neynarContainer = document.querySelector('.neynar_signin');
+                const btn = neynarContainer?.querySelector('button');
+                if (btn) {
+                  btn.setAttribute('type', 'button'); // Sicherheitshalber
+                  btn.click();
+                } else {
+                  console.error("Neynar button not loaded yet.");
+                }
+              }}
+              data-testid="button-farcaster-login"
+            >
+              <SiFarcaster className="w-5 h-5 text-purple-400" />
+              Sign in with Farcaster
             </Button>
           </div>
-          <p className="mt-4 text-xs text-soft-muted/60">Your identity prevents impersonation and enables sharing.</p>
+
+          <p className="mt-4 text-xs text-soft-muted/60">
+            Your identity prevents impersonation and enables sharing.
+          </p>
         </div>
       </div>
     </div>
