@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Footer } from "@/components/Footer";
+import { ArchiveTable } from "@/components/ArchiveTable"; // NEU: Archiv-Tabelle importiert
 import QRCode from "react-qr-code";
 import html2canvas from "html2canvas";
 
-// WALLET IMPORTS (EthQrCode entfernt für maximale Stabilität)
+// WALLET IMPORTS (Optimiert für Version 0.31.1)
 import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
 import { Address, Avatar, Name, Identity } from '@coinbase/onchainkit/identity';
 
@@ -30,26 +31,24 @@ interface CapsuleData {
   sealerAddress?: string;
 }
 
-interface Props { id: string; }
-
-function formatTechnicalDate(dateString: string): string {
-    const d = new Date(dateString);
-    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    return `${date} • ${time} UTC`;
-}
-
-function formatSimpleDate(dateString: string): string {
-    const d = new Date(dateString);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatUTC(date: Date): string {
-  const options: Intl.DateTimeFormatOptions = { 
-    month: 'short', day: 'numeric', year: 'numeric', 
-    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' 
+// HILFSFUNKTION FÜR ECHTE UTC-ANZEIGE
+function formatToStrictUTC(dateString: string): string {
+  const d = new Date(dateString);
+  const options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'UTC'
   };
-  return date.toLocaleDateString('en-US', options) + ' UTC';
+  return d.toLocaleDateString('en-US', options) + ' UTC';
+}
+
+function formatSimpleDateUTC(dateString: string): string {
+  const d = new Date(dateString);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 }
 
 function calculateTimeLeft(targetDate: Date) {
@@ -63,7 +62,6 @@ function calculateTimeLeft(targetDate: Date) {
     hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
     minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
     seconds: Math.floor((difference % (1000 * 60)) / 1000),
-    expired: false,
   };
 }
 
@@ -74,7 +72,7 @@ function CountdownTimer({ targetDate }: { targetDate: Date }) {
     return () => clearInterval(timer);
   }, [targetDate]);
 
-  if (timeLeft.expired) return null;
+  if (timeLeft && 'expired' in timeLeft && timeLeft.expired) return null;
 
   const TimeBlock = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
@@ -92,13 +90,13 @@ function CountdownTimer({ targetDate }: { targetDate: Date }) {
 
   return (
     <div className="flex items-center justify-center gap-2 md:gap-4">
-      <TimeBlock value={timeLeft.days} label="Days" />
+      <TimeBlock value={timeLeft.days || 0} label="Days" />
       <span className="text-2xl md:text-4xl text-[#1652F0]/50 font-light">:</span>
-      <TimeBlock value={timeLeft.hours} label="Hours" />
+      <TimeBlock value={timeLeft.hours || 0} label="Hours" />
       <span className="text-2xl md:text-4xl text-[#1652F0]/50 font-light">:</span>
-      <TimeBlock value={timeLeft.minutes} label="Mins" />
+      <TimeBlock value={timeLeft.minutes || 0} label="Mins" />
       <span className="text-2xl md:text-4xl text-[#1652F0]/50 font-light">:</span>
-      <TimeBlock value={timeLeft.seconds} label="Secs" />
+      <TimeBlock value={timeLeft.seconds || 0} label="Secs" />
     </div>
   );
 }
@@ -134,40 +132,40 @@ function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsul
               </div>
               <div className="bg-black/40 p-3 rounded-lg border border-white/5">
                   <span className="block text-slate-500 uppercase text-[9px] mb-0.5 tracking-widest">Sealed At</span>
-                  <div className="meta-text-fix text-slate-200 shadow-white/10 drop-shadow-sm text-[10px] h-7 flex items-center">{formatTechnicalDate(sealedAt)}</div>
+                  <div className="meta-text-fix text-slate-200 shadow-white/10 drop-shadow-sm text-[10px] h-7 flex items-center">{formatToStrictUTC(sealedAt)}</div>
               </div>
               <div className="bg-black/40 p-3 rounded-lg border border-white/5">
                   <span className="block text-slate-500 uppercase text-[9px] mb-0.5 tracking-widest">Revealed At</span>
-                  <div className="meta-text-fix text-emerald-400 shadow-emerald-400/20 drop-shadow-sm text-[10px] h-7 flex items-center">{formatTechnicalDate(revealedAt)}</div>
+                  <div className="meta-text-fix text-emerald-400 shadow-emerald-400/20 drop-shadow-sm text-[10px] h-7 flex items-center">{formatToStrictUTC(revealedAt)}</div>
               </div>
           </div>
 
           <div className="relative bg-gradient-to-b from-black/60 to-black/40 p-5 rounded-xl border border-white/10 mb-2 h-[280px] overflow-y-auto flex flex-col">
-             <div className="intro-text-fix text-[10px] text-slate-300 font-mono mb-6 text-left w-full leading-relaxed border-b border-white/5 pb-2">
-                {sealerIdentity || 'Anonymous'} wrote this message on {formatSimpleDate(sealedAt)} to the future on {formatSimpleDate(revealedAt)}.
-             </div>
+              <div className="intro-text-fix text-[10px] text-slate-300 font-mono mb-6 text-left w-full leading-relaxed border-b border-white/5 pb-2">
+                {sealerIdentity || 'Anonymous'} wrote this message on {formatSimpleDateUTC(sealedAt)} to the future on {formatSimpleDateUTC(revealedAt)}.
+              </div>
 
-             <div className="flex-1 flex items-center justify-center relative px-4">
-                <span className="absolute -top-2 -left-1 text-5xl text-cyan-500/30 font-serif drop-shadow-[0_0_10px_rgba(6,182,212,0.2)]">"</span>
-                <p className="relative z-10 text-xl leading-relaxed text-white font-serif font-light whitespace-pre-wrap text-center">{message}</p>
-                <span className="absolute -bottom-4 -right-1 text-5xl text-purple-500/30 font-serif rotate-180 drop-shadow-[0_0_10px_rgba(168,85,247,0.2)]">"</span>
-             </div>
+              <div className="flex-1 flex items-center justify-center relative px-4">
+                 <span className="absolute -top-2 -left-1 text-5xl text-cyan-500/30 font-serif drop-shadow-[0_0_10px_rgba(6,182,212,0.2)]">"</span>
+                 <p className="relative z-10 text-xl leading-relaxed text-white font-serif font-light whitespace-pre-wrap text-center">{message}</p>
+                 <span className="absolute -bottom-4 -right-1 text-5xl text-purple-500/30 font-serif rotate-180 drop-shadow-[0_0_10px_rgba(168,85,247,0.2)]">"</span>
+              </div>
           </div>
 
           <div className="flex items-center justify-between border-t border-white/10 pt-3 mt-auto mb-1">
-             <div className="text-[9px] text-slate-300 uppercase tracking-widest space-y-1 font-medium">
-                 <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_5px_rgba(59,130,246,0.8)]"></div><p className="footer-text-fix">Immutable Record</p></div>
-                 <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-purple-500 rounded-full shadow-[0_0_5px_rgba(168,85,247,0.8)]"></div><p className="footer-text-fix">Secured on Base</p></div>
-                 <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_5px_rgba(255,255,255,0.8)]"></div><p className="footer-text-fix">Verifiable Content</p></div>
-             </div>
-             <div className="flex items-center gap-3">
-                <span className="scan-text-fix text-[8px] text-slate-500 uppercase tracking-widest whitespace-nowrap">Scan to Verify</span>
-                <div className="p-1 rounded-lg border border-white/10 bg-black/40 shadow-lg">
-                    <div style={{ height: "auto", margin: "0 auto", maxWidth: 48, width: "100%" }}>
-                        <QRCode size={256} style={{ height: "auto", maxWidth: "100%", width: "100%" }} value={capsuleUrl} viewBox={`0 0 256 256`} bgColor="transparent" fgColor="#FFFFFF" />
-                    </div>
-                </div>
-             </div>
+              <div className="text-[9px] text-slate-300 uppercase tracking-widest space-y-1 font-medium">
+                  <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_5px_rgba(59,130,246,0.8)]"></div><p className="footer-text-fix">Immutable Record</p></div>
+                  <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-purple-500 rounded-full shadow-[0_0_5px_rgba(168,85,247,0.8)]"></div><p className="footer-text-fix">Secured on Base</p></div>
+                  <div className="flex items-center gap-2"><div className="w-1.5 h-1.5 bg-white rounded-full shadow-[0_0_5px_rgba(255,255,255,0.8)]"></div><p className="footer-text-fix">Verifiable Content</p></div>
+              </div>
+              <div className="flex items-center gap-3">
+                 <span className="scan-text-fix text-[8px] text-slate-500 uppercase tracking-widest whitespace-nowrap">Scan to Verify</span>
+                 <div className="p-1 rounded-lg border border-white/10 bg-black/40 shadow-lg">
+                     <div style={{ height: "auto", margin: "0 auto", maxWidth: 48, width: "100%" }}>
+                         <QRCode size={256} style={{ height: "auto", maxWidth: "100%", width: "100%" }} value={capsuleUrl} viewBox={`0 0 256 256`} bgColor="transparent" fgColor="#FFFFFF" />
+                     </div>
+                 </div>
+              </div>
           </div>
         </div>
       </div>
@@ -221,29 +219,31 @@ export default function CapsulePage({ id }: { id: string }) {
   return (
     <div className="min-h-screen w-full flex flex-col items-center p-4 md:p-8 bg-[#050A15] relative overflow-x-hidden">
 
-      {/* WALLET INTEGRATION */}
+      {/* WALLET INTEGRATION MIT CUSTOM DESIGN FIX */}
       <div className="w-full max-w-5xl flex justify-end mb-4 z-50">
-        <Wallet>
-          <ConnectWallet className="bg-[#1652F0] hover:bg-[#0039CB] text-white rounded-xl px-4 py-2 flex items-center gap-2">
-            <Avatar className="h-6 w-6" />
-            <Name />
-          </ConnectWallet>
-          <WalletDropdown>
-            <Identity className="px-4 pt-3 pb-2 bg-[#050A15] border border-white/10" hasCopyAddressOnClick>
-              <Avatar />
+        <div className="onchainkit-custom">
+          <Wallet>
+            <ConnectWallet className="bg-[#1652F0] hover:bg-[#0039CB] text-white rounded-xl px-4 py-2 flex items-center gap-2 border-none">
+              <Avatar className="h-6 w-6" />
               <Name />
-              <Address />
-            </Identity>
-            <WalletDropdownDisconnect className="hover:bg-red-500/10 text-red-500" />
-          </WalletDropdown>
-        </Wallet>
+            </ConnectWallet>
+            <WalletDropdown className="bg-[#020617] border border-white/10 shadow-2xl">
+              <Identity className="px-4 pt-3 pb-2 bg-[#020617]" hasCopyAddressOnClick>
+                <Avatar />
+                <Name />
+                <Address className="text-blue-400" />
+              </Identity>
+              <WalletDropdownDisconnect className="hover:bg-red-500/10 text-red-500 font-bold" />
+            </WalletDropdown>
+          </Wallet>
+        </div>
       </div>
 
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#1652F0]/10 rounded-full blur-[120px]" />
       </div>
 
-      <main className="w-full max-w-3xl flex-1 flex flex-col mt-4 md:mt-8">
+      <main className="w-full max-w-3xl flex flex-col mt-4 md:mt-8">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
           <Link href="/">
             <div className="flex flex-col items-center cursor-pointer group">
@@ -282,8 +282,8 @@ export default function CapsulePage({ id }: { id: string }) {
               <h2 className="text-3xl font-bold text-white glow-text">Capsule Locked</h2>
               <CountdownTimer targetDate={new Date(capsule.revealDate)} />
               <div className="bg-black/30 p-4 rounded-xl border border-white/5 flex justify-between text-sm font-mono text-[#1652F0]">
-                <span className="text-[#CBD5E1]">Reveals at:</span>
-                <span>{formatUTC(new Date(capsule.revealDate))}</span>
+                <span className="text-[#CBD5E1]">Reveals at (UTC):</span>
+                <span>{formatToStrictUTC(capsule.revealDate)}</span>
               </div>
             </div>
           )}
@@ -300,6 +300,12 @@ export default function CapsulePage({ id }: { id: string }) {
           </div>
         </div>
       </main>
+
+      {/* NEU: Archiv-Tabelle hier integriert */}
+      <div className="w-full mt-12">
+        <ArchiveTable />
+      </div>
+
       <Footer />
     </div>
   );

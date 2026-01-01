@@ -8,7 +8,7 @@ export function Footer() {
   });
 
   return (
-    <footer className="w-full mt-24 pb-12 flex flex-col items-center justify-center relative z-10">
+    <footer className="w-full mt-4 pb-12 flex flex-col items-center justify-center relative z-10">
 
       {/* 1. Die Statistik */}
       {stats && (
@@ -27,8 +27,8 @@ export function Footer() {
         </motion.div>
       )}
 
-      {/* 2. Tech Stack Pille */}
-      <div className="flex flex-col md:flex-row items-center gap-3 md:gap-6 text-xs md:text-sm font-medium text-[#CBD5E1]/60 bg-white/5 px-6 py-3 rounded-full border border-white/5 backdrop-blur-sm hover:border-white/10 transition-colors">
+      {/* 2. Tech Stack Pille - FIXED: Horizontal alignment */}
+      <div className="flex flex-row items-center gap-4 md:gap-6 text-xs md:text-sm font-medium text-[#CBD5E1]/60 bg-white/5 px-6 py-3 rounded-full border border-white/5 backdrop-blur-sm hover:border-white/10 transition-colors">
         <span className="text-[#CBD5E1]/40 uppercase tracking-wider text-[10px] mr-1">
           Powered by
         </span>
@@ -36,27 +36,27 @@ export function Footer() {
         {/* Base */}
         <div className="flex items-center gap-2 hover:text-white transition-colors cursor-help" title="Base Network">
           <span className="w-2.5 h-2.5 rounded-full bg-[#0052FF] shadow-[0_0_8px_#0052FF]"></span>
-          Base
+          <span className="whitespace-nowrap">Base</span>
         </div>
 
-        <span className="hidden md:inline text-white/10">•</span>
+        <span className="text-white/10">•</span>
 
         {/* Farcaster */}
         <div className="flex items-center gap-2 hover:text-white transition-colors cursor-help" title="Farcaster Protocol">
           <span className="w-2.5 h-2.5 rounded bg-[#855DCD] shadow-[0_0_8px_#855DCD]"></span>
-          Farcaster
+          <span className="whitespace-nowrap">Farcaster</span>
         </div>
 
-        <span className="hidden md:inline text-white/10">•</span>
+        <span className="text-white/10">•</span>
 
         {/* Zora */}
         <div className="flex items-center gap-2 hover:text-white transition-colors cursor-help" title="Zora Integration">
           <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-white to-gray-400 shadow-[0_0_8px_rgba(255,255,255,0.5)]"></span>
-          Zora
+          <span className="whitespace-nowrap">Zora</span>
         </div>
       </div>
 
-      {/* 3. Signature - JETZT HELLER UND BESSER LESBAR */}
+      {/* 3. Signature */}
       <div className="mt-8">
         <p className="text-xs text-[#CBD5E1]/80 italic hover:text-white transition-colors cursor-default tracking-wider">
           created by gelassen.eth
