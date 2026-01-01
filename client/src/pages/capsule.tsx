@@ -157,23 +157,30 @@ export default function CapsulePage({ id }: { id: string }) {
   const handleMint = async () => {
     if (!capsule) return;
 
-    // KORREKTUR: Wir nutzen string-basiertes Parsing, um Rundungsfehler zu vermeiden
-    // "0.000777" wird als String sicher in Wei umgewandelt und dann multipliziert.
+    // PREIS BERECHNEN: BigInt nutzen für Präzision (Wei)
     const pricePerNFT = parseEther("0.000777");
     const totalValue = pricePerNFT * BigInt(mintAmount);
+
+    // NEU: Token ID definieren (für Editions ist das meistens 0 für das erste Werk)
+    const tokenId = BigInt(0); 
 
     writeContract({
       address: CAPSULE_CONTRACT_ADDRESS as `0x${string}`,
       abi: [{
-        "inputs": [{"internalType": "uint256", "name": "quantity", "type": "uint256"}],
+        // UPDATE ABI: Jetzt erwarten wir ZWEI Inputs (ID und Menge)
+        "inputs": [
+            {"internalType": "uint256", "name": "id", "type": "uint256"}, 
+            {"internalType": "uint256", "name": "amount", "type": "uint256"}
+        ],
         "name": "mint",
         "outputs": [],
         "stateMutability": "payable",
         "type": "function"
       }],
       functionName: 'mint',
-      args: [BigInt(mintAmount)],
-      value: totalValue, // Exakter Betrag ohne JavaScript-Rundungsfehler
+      // UPDATE ARGS: Wir senden ID (0) und die Menge
+      args: [tokenId, BigInt(mintAmount)], 
+      value: totalValue,
     });
   };
 
@@ -265,10 +272,19 @@ export default function CapsulePage({ id }: { id: string }) {
 
           <div className="flex flex-col gap-4 w-full mt-8" style={{ maxWidth: `${600 * scale}px` }}>
               <div className="flex flex-col md:flex-row gap-4 w-full">
-                 <div className="flex-1 bg-white/5 border border-white/10 p-4 flex flex-col justify-center rounded-xl min-h-[64px]">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Total Minted</span>
-                    <span className="text-xl text-white font-mono leading-none">{capsule.mintCount || 0} / 100</span>
+
+                 {/* UPDATE: LINKER BEREICH (TOTAL MINTED) + RECHTER BEREICH (PREIS) */}
+                 <div className="flex-1 bg-white/5 border border-white/10 p-4 flex items-center justify-between rounded-xl min-h-[64px]">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Total Minted</span>
+                        <span className="text-xl text-white font-mono leading-none">{capsule.mintCount || 0} / 100</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Price</span>
+                        <span className="text-xl text-white font-mono leading-none">0.000777 ETH</span>
+                    </div>
                  </div>
+
                  <div className="flex-[1.5] bg-white/5 border border-white/10 p-2 flex items-center justify-between gap-4 rounded-xl min-h-[64px]">
                     <div className="flex items-center gap-3 pl-2">
                        <button disabled={isWritePending || isConfirming} onClick={() => setMintAmount(Math.max(1, mintAmount - 1))} className="p-1 text-white hover:bg-white/10 transition-colors disabled:opacity-30"><Minus size={18}/></button>
