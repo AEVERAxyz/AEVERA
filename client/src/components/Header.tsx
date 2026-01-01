@@ -25,10 +25,6 @@ export function Header() {
                style={{ letterSpacing: '0.076em', marginRight: '-0.076em' }}>
               Send a message to the future
             </p>
-            <p className="text-[10px] text-[#1652F0] uppercase font-extrabold whitespace-nowrap text-center mt-1.5"
-               style={{ letterSpacing: '0.14em', marginRight: '-0.14em' }}>
-              Mint it as an NFT when revealed
-            </p>
           </div>
         </div>
       </Link>
