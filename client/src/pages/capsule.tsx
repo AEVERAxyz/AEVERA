@@ -12,7 +12,7 @@ import html2canvas from "html2canvas";
 import confetti from "canvas-confetti";
 
 // BLOCKCHAIN IMPORTS
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt, useAccount, useSwitchChain } from 'wagmi';
 import { parseEther } from 'viem';
 import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
 import { Address, Avatar, Name, Identity } from '@coinbase/onchainkit/identity';
@@ -136,7 +136,9 @@ export default function CapsulePage({ id }: { id: string }) {
 
   const { data: capsule, isLoading, refetch }: any = useQuery({ queryKey: ['/api/capsules', id] });
 
-  // MINT LOGIK HOOKS
+  // MINT LOGIK HOOKS & NETZWERK-CHECK
+  const { chain } = useAccount();
+  const { switchChain } = useSwitchChain();
   const { writeContract, data: hash, isPending: isWritePending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
@@ -267,19 +269,30 @@ export default function CapsulePage({ id }: { id: string }) {
                        <span className="text-xl font-mono font-bold text-white min-w-[25px] text-center">{mintAmount}</span>
                        <button disabled={isWritePending || isConfirming} onClick={() => setMintAmount(Math.min(10, mintAmount + 1))} className="p-1 text-white hover:bg-white/10 transition-colors disabled:opacity-30"><Plus size={18}/></button>
                     </div>
-                    <Button 
-                     onClick={handleMint}
-                     disabled={(capsule.mintCount || 0) >= 100 || isWritePending || isConfirming} 
-                     className="flex-1 bg-[#1652F0] hover:bg-blue-600 text-white font-bold h-full rounded-xl px-6 py-2 transition-all active:scale-95"
-                    >
-                      {isWritePending || isConfirming ? (
-                        <Loader2 className="animate-spin h-5 w-5 mx-auto" />
-                      ) : isConfirmed ? (
-                        <CheckCircle2 className="h-5 w-5 mx-auto text-emerald-400" />
-                      ) : (
-                        "MINT NFT"
-                      )}
-                    </Button>
+
+                    {/* ABSICHERUNG GEGEN FALSCHE BLOCKCHAIN */}
+                    {chain?.id !== 8453 ? (
+                      <Button 
+                        onClick={() => switchChain({ chainId: 8453 })}
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold h-full rounded-xl px-6 py-2 transition-all active:scale-95"
+                      >
+                        SWITCH TO BASE
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handleMint}
+                        disabled={(capsule.mintCount || 0) >= 100 || isWritePending || isConfirming} 
+                        className="flex-1 bg-[#1652F0] hover:bg-blue-600 text-white font-bold h-full rounded-xl px-6 py-2 transition-all active:scale-95"
+                      >
+                        {isWritePending || isConfirming ? (
+                          <Loader2 className="animate-spin h-5 w-5 mx-auto" />
+                        ) : isConfirmed ? (
+                          <CheckCircle2 className="h-5 w-5 mx-auto text-emerald-400" />
+                        ) : (
+                          "MINT NFT"
+                        )}
+                      </Button>
+                    )}
                  </div>
               </div>
               <Button onClick={handleDownloadImage} variant="outline" className="w-full border-white/10 bg-white/5 hover:bg-white/10 text-white rounded-xl min-h-[64px] py-4 flex items-center justify-center gap-2">
