@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Footer } from "@/components/Footer";
-import { ArchiveTable } from "@/components/ArchiveTable"; // NEU: Archiv-Tabelle importiert
+import { ArchiveTable } from "@/components/ArchiveTable";
 import QRCode from "react-qr-code";
 import html2canvas from "html2canvas";
 
@@ -219,21 +219,21 @@ export default function CapsulePage({ id }: { id: string }) {
   return (
     <div className="min-h-screen w-full flex flex-col items-center p-4 md:p-8 bg-[#050A15] relative overflow-x-hidden">
 
-      {/* WALLET INTEGRATION MIT CUSTOM DESIGN FIX */}
+      {/* WALLET INTEGRATION - CUSTOM DESIGN */}
       <div className="w-full max-w-5xl flex justify-end mb-4 z-50">
         <div className="onchainkit-custom">
           <Wallet>
             <ConnectWallet className="bg-[#1652F0] hover:bg-[#0039CB] text-white rounded-xl px-4 py-2 flex items-center gap-2 border-none">
               <Avatar className="h-6 w-6" />
-              <Name />
+              <Name className="text-white font-bold" />
             </ConnectWallet>
             <WalletDropdown className="bg-[#020617] border border-white/10 shadow-2xl">
-              <Identity className="px-4 pt-3 pb-2 bg-[#020617]" hasCopyAddressOnClick>
+              <Identity className="px-4 pt-3 pb-2 bg-[#020617] hover:bg-white/5" hasCopyAddressOnClick>
                 <Avatar />
-                <Name />
+                <Name className="text-white font-bold" />
                 <Address className="text-blue-400" />
               </Identity>
-              <WalletDropdownDisconnect className="hover:bg-red-500/10 text-red-500 font-bold" />
+              <WalletDropdownDisconnect className="hover:bg-red-500/10 text-red-500 font-bold bg-[#020617]" />
             </WalletDropdown>
           </Wallet>
         </div>
@@ -243,7 +243,8 @@ export default function CapsulePage({ id }: { id: string }) {
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#1652F0]/10 rounded-full blur-[120px]" />
       </div>
 
-      <main className="w-full max-w-3xl flex flex-col mt-4 md:mt-8">
+      {/* 1. ABSTAND: Header zu Reveal Box (mt-12) */}
+      <main className="w-full max-w-3xl flex flex-col mt-12">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
           <Link href="/">
             <div className="flex flex-col items-center cursor-pointer group">
@@ -270,7 +271,7 @@ export default function CapsulePage({ id }: { id: string }) {
               />
               <div className="pt-6 border-t border-[#1652F0]/30">
                 <Button onClick={handleDownloadImage} className="w-full h-14 bg-[#6366F1] hover:bg-[#5558E3] shadow-[0_0_20px_rgba(99,102,241,0.4)] text-white font-bold rounded-xl text-lg">
-                  <Camera className="mr-2 h-5 w-5" /> 📸 Test: Download Image
+                  <Camera className="mr-2 h-5 w-5" /> Save Capsule Image
                 </Button>
               </div>
             </div>
@@ -301,7 +302,7 @@ export default function CapsulePage({ id }: { id: string }) {
         </div>
       </main>
 
-      {/* NEU: Archiv-Tabelle hier integriert */}
+      {/* 2. ABSTAND: Reveal Box zu Tabelle (mt-12) */}
       <div className="w-full mt-12">
         <ArchiveTable />
       </div>

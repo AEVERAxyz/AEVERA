@@ -192,3 +192,51 @@
 .text-soft-muted {
   color: #A0A0A0;
 }
+
+/* ============================================================
+   ONCHAINKIT WALLET CUSTOM DESIGN OVERRIDE
+   ============================================================ */
+
+/* Entfernt das "Augen-Logo" und setzt ein edles blaues Icon-Feld */
+.onchainkit-custom [class*="ock-avatar"] {
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, #1652F0 0%, #0039CB 100%) !important;
+  box-shadow: 0 0 10px rgba(22, 82, 240, 0.4) !important;
+}
+
+.onchainkit-custom [class*="ock-avatar"] img {
+  display: none !important; /* Versteckt das Logo mit Augen */
+}
+
+/* Dropdown: Hintergrund tiefschwarz & Text in strahlendem Weiß */
+.onchainkit-custom [class*="ock-wallet-dropdown"] {
+  background-color: #020617 !important;
+  border: 1px solid rgba(22, 82, 240, 0.3) !important;
+}
+
+/* Korrektur der Lesbarkeit (Weiß auf Dunkelblau statt Schwarz auf Dunkelblau) */
+.onchainkit-custom [class*="ock-identity-name"],
+.onchainkit-custom [class*="ock-text-primary"],
+.onchainkit-custom [class*="ock-wallet-dropdown-link"] {
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Hover-Fix: Keine harten weißen Flächen mehr */
+.onchainkit-custom [class*="ock-identity"]:hover,
+.onchainkit-custom [class*="ock-wallet-dropdown-link"]:hover {
+  background-color: rgba(22, 82, 240, 0.1) !important;
+  color: #FFFFFF !important;
+}
+
+/* Disconnect-Button Styling */
+.onchainkit-custom [class*="ock-wallet-dropdown-disconnect"] {
+  color: #ef4444 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background-color: #020617 !important;
+}
+
+.onchainkit-custom [class*="ock-wallet-dropdown-disconnect"]:hover {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
