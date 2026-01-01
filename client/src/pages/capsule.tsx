@@ -156,6 +156,12 @@ export default function CapsulePage({ id }: { id: string }) {
 
   const handleMint = async () => {
     if (!capsule) return;
+
+    // KORREKTUR: Wir nutzen string-basiertes Parsing, um Rundungsfehler zu vermeiden
+    // "0.000777" wird als String sicher in Wei umgewandelt und dann multipliziert.
+    const pricePerNFT = parseEther("0.000777");
+    const totalValue = pricePerNFT * BigInt(mintAmount);
+
     writeContract({
       address: CAPSULE_CONTRACT_ADDRESS as `0x${string}`,
       abi: [{
@@ -167,7 +173,7 @@ export default function CapsulePage({ id }: { id: string }) {
       }],
       functionName: 'mint',
       args: [BigInt(mintAmount)],
-      value: parseEther((0.000777 * mintAmount).toString()),
+      value: totalValue, // Exakter Betrag ohne JavaScript-Rundungsfehler
     });
   };
 
