@@ -48,6 +48,13 @@ function formatSimpleDateUTC(dateString: string): string {
 function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsuleId, cardRef }: any) {
   const capsuleUrl = `${window.location.origin}/capsule/${capsuleId}`;
 
+  // UTC-BASIERTER DATUMSVERGLEICH FIX
+  const d1 = new Date(sealedAt);
+  const d2 = new Date(revealedAt);
+  const isSameUTCDay = d1.getUTCFullYear() === d2.getUTCFullYear() &&
+                       d1.getUTCMonth() === d2.getUTCMonth() &&
+                       d1.getUTCDate() === d2.getUTCDate();
+
   return (
     <div className="flex justify-center w-full">
       <motion.div 
@@ -90,16 +97,14 @@ function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsul
               </div>
           </div>
 
-          {/* TEIL 3: TEXT - Korrigierte Logik für Gleicher Tag / Unterschiedliche Tage */}
+          {/* TEIL 3: TEXT - Mit UTC-Fix für den Jahreswechsel */}
           <div className="relative bg-black/40 border-y border-white/10 flex flex-col overflow-hidden rounded-none" style={{ flexBasis: '45.45%', height: '45.45%' }}>
               <div className="text-[10px] text-white font-mono px-8 py-3 border-b border-white/5 leading-relaxed">
-                {new Date(sealedAt).toDateString() === new Date(revealedAt).toDateString() ? (
-                  /* GLEICHER TAG - Ohne UTC am Ende */
+                {isSameUTCDay ? (
                   <>
                     Written by {sealerIdentity || 'Anonymous'} on {formatSimpleDateUTC(sealedAt)} at {new Date(sealedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false, timeZone: 'UTC'})} to be read in the same day at {new Date(revealedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false, timeZone: 'UTC'})}.
                   </>
                 ) : (
-                  /* VERSCHIEDENE TAGE */
                   <>
                     Written by {sealerIdentity || 'Anonymous'} on {formatSimpleDateUTC(sealedAt)} to be read in the future on {formatSimpleDateUTC(revealedAt)}.
                   </>
