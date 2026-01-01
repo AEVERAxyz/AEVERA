@@ -2,9 +2,8 @@ import { useState } from "react";
 import { CreateCapsuleForm } from "@/components/CreateCapsuleForm";
 import { ArchiveTable } from "@/components/ArchiveTable";
 import { Footer } from "@/components/Footer";
+import { Header } from "@/components/Header"; // Importiert den neuen Header
 import { motion } from "framer-motion";
-import logoImage from "@assets/logo_final_1767063482143.png";
-import { Link } from "wouter";
 
 // ONCHAINKIT & UI IMPORTS
 import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Copy, ArrowRight, RotateCcw } from "lucide-react";
 import { SiFarcaster } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 
 export default function Home() {
   const [createdCapsuleId, setCreatedCapsuleId] = useState<string | null>(null);
@@ -39,16 +39,14 @@ export default function Home() {
   return (
     <div className="min-h-screen w-full flex flex-col items-center p-4 md:p-8 bg-[#050A15] relative overflow-x-hidden">
 
-      {/* WALLET INTEGRATION - CUSTOM STYLED */}
+      {/* WALLET INTEGRATION */}
       <div className="w-full max-w-5xl flex justify-end mb-4 z-50">
         <div className="onchainkit-custom">
           <Wallet>
             <ConnectWallet className="bg-[#1652F0] hover:bg-[#0039CB] text-white rounded-xl px-4 py-2 flex items-center gap-2 border-none">
-              {/* Avatar wurde hier belassen, aber wir stylen ihn via CSS in index.css um das Logo zu verstecken */}
               <Avatar className="h-6 w-6" />
               <Name className="text-white" />
             </ConnectWallet>
-            {/* Dropdown-Styling: Hintergrund dunkel, Text weiß */}
             <WalletDropdown className="bg-[#020617] border border-white/10 shadow-2xl">
               <Identity className="px-4 pt-3 pb-2 bg-[#020617] hover:bg-white/5" hasCopyAddressOnClick>
                 <Avatar />
@@ -61,42 +59,13 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Background Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10">
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#1652F0]/10 rounded-full blur-[120px]" />
       </div>
 
-      {/* 1. ABSTAND: Header zu Main Box (mt-12) */}
       <main className="w-full max-w-2xl relative z-10 flex flex-col justify-center mt-12">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="text-center mb-12"
-        >
-          <Link href="/">
-            <div className="flex flex-col items-center cursor-pointer group">
-              <img 
-                src={logoImage} 
-                alt="TimeCapsule Logo" 
-                className="h-[105px] w-auto mb-[-8px] drop-shadow-[0_0_20px_rgba(22, 82, 240, 0.6)] group-hover:scale-105 transition-transform duration-300" 
-              />
-              <h1 className="text-4xl font-extrabold text-white tracking-tighter glow-text leading-none mb-1">
-                TimeCapsule
-              </h1>
-              <div className="w-[218px] border-t border-[#1652F0]/30 pt-2 flex flex-col items-center">
-                <p className="text-[12px] text-[#CBD5E1] uppercase font-medium whitespace-nowrap text-center"
-                   style={{ letterSpacing: '0.076em', marginRight: '-0.076em' }}>
-                  Send a message to the future
-                </p>
-                <p className="text-[10px] text-[#1652F0] uppercase font-extrabold whitespace-nowrap text-center mt-1.5"
-                   style={{ letterSpacing: '0.14em', marginRight: '-0.14em' }}>
-                  Mint it as an NFT when revealed
-                </p>
-              </div>
-            </div>
-          </Link>
-        </motion.div>
+        {/* DER NEUE SYNCHRONISIERTE HEADER */}
+        <Header />
 
         <motion.div
           layout
@@ -156,12 +125,10 @@ export default function Home() {
         </motion.div>
       </main>
 
-      {/* 2. ABSTAND: Main Box zu Tabelle (mt-12) */}
       <div className="w-full mt-12">
         <ArchiveTable />
       </div>
 
-      {/* 3. ABSTAND: Tabelle zu Footer wird in der Footer-Komponente geregelt (mt-12) */}
       <Footer />
     </div>
   );
