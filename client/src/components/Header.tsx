@@ -1,6 +1,8 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import logoImage from "@assets/logo_final_1767063482143.png";
+// 1. Der neue Profi-Import
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export function Header() {
   return (
@@ -8,14 +10,14 @@ export function Header() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="text-center mb-12"
+      className="text-center mb-12 flex flex-col items-center"
     >
       <Link href="/">
         <div className="flex flex-col items-center cursor-pointer group">
-          <img 
-            src={logoImage} 
-            alt="TimeCapsule Logo" 
-            className="h-[105px] w-auto mb-[-8px] drop-shadow-[0_0_20px_rgba(22,82,240,0.6)] group-hover:scale-105 transition-transform duration-300" 
+          <img
+            src={logoImage}
+            alt="TimeCapsule Logo"
+            className="h-[105px] w-auto mb-[-8px] drop-shadow-[0_0_20px_rgba(22,82,240,0.6)] group-hover:scale-105 transition-transform duration-300"
           />
           <h1 className="text-4xl font-extrabold text-white tracking-tighter glow-text leading-none mb-1">
             TimeCapsule
@@ -28,6 +30,16 @@ export function Header() {
           </div>
         </div>
       </Link>
+
+      {/* 2. Der neue Connect-Button direkt unter dem Logo-Text */}
+      <div className="mt-8">
+        <ConnectButton 
+          label="Connect Wallet"
+          accountStatus="address"
+          chainStatus="icon"
+          showBalance={false}
+        />
+      </div>
     </motion.div>
   );
 }

@@ -11,14 +11,30 @@ import QRCode from "react-qr-code";
 import html2canvas from "html2canvas";
 import confetti from "canvas-confetti";
 
-// BLOCKCHAIN IMPORTS
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, useSwitchChain } from 'wagmi';
+// BLOCKCHAIN IMPORTS (RainbowKit & Wagmi)
+import { 
+  useWriteContract, 
+  useWaitForTransactionReceipt, 
+  useAccount, 
+  useSwitchChain,
+  useReadContract 
+} from 'wagmi';
 import { parseEther } from 'viem';
-import { Wallet, ConnectWallet, WalletDropdown, WalletDropdownDisconnect } from '@coinbase/onchainkit/wallet';
-import { Address, Avatar, Name, Identity } from '@coinbase/onchainkit/identity';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 // DEINE LIVE CONTRACT ADRESSE AUF BASE
 const CAPSULE_CONTRACT_ADDRESS = "0x84eebe20e1536059dF1f658eD1F0181BC5e9B987";
+
+// ABI für den Live-Zähler
+const MINTER_ABI = [
+  {
+    "inputs": [{"internalType": "uint256", "name": "id", "type": "uint256"}],
+    "name": "totalSupply",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
 
 function formatToStrictUTC(dateString: string): string {
   const d = new Date(dateString);
@@ -33,6 +49,7 @@ function formatSimpleDateUTC(dateString: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 }
 
+// DESIGN BLEIBT UNVERÄNDERT (Inklusive Snapshot-Fixes)
 function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsuleId, cardRef, isRevealed, isSnapshot = false }: any) {
   const capsuleUrl = `${window.location.origin}/capsule/${capsuleId}`;
   const d1 = new Date(sealedAt);
@@ -136,11 +153,20 @@ export default function CapsulePage({ id }: { id: string }) {
 
   const { data: capsule, isLoading, refetch }: any = useQuery({ queryKey: ['/api/capsules', id] });
 
-  // MINT LOGIK HOOKS & NETZWERK-CHECK
+  // BLOCKCHAIN HOOKS
   const { chain } = useAccount();
   const { switchChain } = useSwitchChain();
   const { writeContract, data: hash, isPending: isWritePending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+
+  // LIVE READ VOM CONTRACT (Verhindert "0/100" Fehler)
+  const { data: onChainTotalSupply } = useReadContract({
+    address: CAPSULE_CONTRACT_ADDRESS as `0x${string}`,
+    abi: MINTER_ABI,
+    functionName: 'totalSupply',
+    args: [BigInt(0)],
+    query: { refetchInterval: 5000 }
+  });
 
   useEffect(() => {
     if (isConfirmed) {
@@ -156,18 +182,12 @@ export default function CapsulePage({ id }: { id: string }) {
 
   const handleMint = async () => {
     if (!capsule) return;
-
-    // PREIS BERECHNEN: BigInt nutzen für Präzision (Wei)
     const pricePerNFT = parseEther("0.000777");
     const totalValue = pricePerNFT * BigInt(mintAmount);
-
-    // NEU: Token ID definieren (für Editions ist das meistens 0 für das erste Werk)
-    const tokenId = BigInt(0); 
 
     writeContract({
       address: CAPSULE_CONTRACT_ADDRESS as `0x${string}`,
       abi: [{
-        // UPDATE ABI: Jetzt erwarten wir ZWEI Inputs (ID und Menge)
         "inputs": [
             {"internalType": "uint256", "name": "id", "type": "uint256"}, 
             {"internalType": "uint256", "name": "amount", "type": "uint256"}
@@ -178,8 +198,7 @@ export default function CapsulePage({ id }: { id: string }) {
         "type": "function"
       }],
       functionName: 'mint',
-      // UPDATE ARGS: Wir senden ID (0) und die Menge
-      args: [tokenId, BigInt(mintAmount)], 
+      args: [BigInt(0), BigInt(mintAmount)], 
       value: totalValue,
     });
   };
@@ -249,11 +268,9 @@ export default function CapsulePage({ id }: { id: string }) {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center p-4 md:p-8 bg-[#050A15]">
+      {/* NUR EIN BUTTON - PROFESSIONELL OBEN RECHTS */}
       <div className="w-full max-w-5xl flex justify-end mb-4">
-        <Wallet>
-          <ConnectWallet className="bg-[#1652F0] text-white rounded-xl px-4 py-2"><Avatar className="h-6 w-6" /><Name /></ConnectWallet>
-          <WalletDropdown><Identity hasCopyAddressOnClick><Avatar /><Name /><Address /></Identity><WalletDropdownDisconnect /></WalletDropdown>
-        </Wallet>
+        <ConnectButton />
       </div>
 
       <main className="w-full max-w-4xl flex flex-col items-center mt-4" ref={containerRef}>
@@ -266,33 +283,34 @@ export default function CapsulePage({ id }: { id: string }) {
             </div>
           </div>
 
+          {/* Hidden Snapshot div - Design bleibt exakt gleich */}
           <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
             <RevealedMessage isSnapshot={true} message={capsule.decryptedContent} sealerIdentity={capsule.sealerIdentity} sealedAt={capsule.createdAt} revealedAt={capsule.revealDate} capsuleId={id} cardRef={snapshotRef} isRevealed={capsule.isRevealed} />
           </div>
 
           <div className="flex flex-col gap-4 w-full mt-8" style={{ maxWidth: `${600 * scale}px` }}>
               <div className="flex flex-col md:flex-row gap-4 w-full">
-
-                 {/* UPDATE: LINKER BEREICH (TOTAL MINTED) + RECHTER BEREICH (PREIS) */}
-                 <div className="flex-1 bg-white/5 border border-white/10 p-4 flex items-center justify-between rounded-xl min-h-[64px]">
+                  {/* DESIGN-ERHALT: Flex-Layout für Zähler und Preis */}
+                  <div className="flex-1 bg-white/5 border border-white/10 p-4 flex items-center justify-between rounded-xl min-h-[64px]">
                     <div className="flex flex-col">
                         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Total Minted</span>
-                        <span className="text-xl text-white font-mono leading-none">{capsule.mintCount || 0} / 100</span>
+                        <span className="text-xl text-white font-mono leading-none">
+                          {onChainTotalSupply ? onChainTotalSupply.toString() : (capsule.mintCount || 0)} / 100
+                        </span>
                     </div>
                     <div className="flex flex-col items-end">
                         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Price</span>
                         <span className="text-xl text-white font-mono leading-none">0.000777 ETH</span>
                     </div>
-                 </div>
+                  </div>
 
-                 <div className="flex-[1.5] bg-white/5 border border-white/10 p-2 flex items-center justify-between gap-4 rounded-xl min-h-[64px]">
+                  <div className="flex-[1.5] bg-white/5 border border-white/10 p-2 flex items-center justify-between gap-4 rounded-xl min-h-[64px]">
                     <div className="flex items-center gap-3 pl-2">
                        <button disabled={isWritePending || isConfirming} onClick={() => setMintAmount(Math.max(1, mintAmount - 1))} className="p-1 text-white hover:bg-white/10 transition-colors disabled:opacity-30"><Minus size={18}/></button>
                        <span className="text-xl font-mono font-bold text-white min-w-[25px] text-center">{mintAmount}</span>
                        <button disabled={isWritePending || isConfirming} onClick={() => setMintAmount(Math.min(10, mintAmount + 1))} className="p-1 text-white hover:bg-white/10 transition-colors disabled:opacity-30"><Plus size={18}/></button>
                     </div>
 
-                    {/* ABSICHERUNG GEGEN FALSCHE BLOCKCHAIN */}
                     {chain?.id !== 8453 ? (
                       <Button 
                         onClick={() => switchChain({ chainId: 8453 })}
@@ -303,7 +321,7 @@ export default function CapsulePage({ id }: { id: string }) {
                     ) : (
                       <Button 
                         onClick={handleMint}
-                        disabled={(capsule.mintCount || 0) >= 100 || isWritePending || isConfirming} 
+                        disabled={(onChainTotalSupply ? Number(onChainTotalSupply) : 0) >= 100 || isWritePending || isConfirming} 
                         className="flex-1 bg-[#1652F0] hover:bg-blue-600 text-white font-bold h-full rounded-xl px-6 py-2 transition-all active:scale-95"
                       >
                         {isWritePending || isConfirming ? (
@@ -315,7 +333,7 @@ export default function CapsulePage({ id }: { id: string }) {
                         )}
                       </Button>
                     )}
-                 </div>
+                  </div>
               </div>
               <Button onClick={handleDownloadImage} variant="outline" className="w-full border-white/10 bg-white/5 hover:bg-white/10 text-white rounded-xl min-h-[64px] py-4 flex items-center justify-center gap-2">
                 <Camera size={18} /> Save Capsule Image
