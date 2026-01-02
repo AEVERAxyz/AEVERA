@@ -48,7 +48,8 @@ export function ArchiveTable() {
       if (!res.ok) throw new Error("Failed to fetch archive");
       return res.json();
     },
-    refetchInterval: 2000, 
+    // WICHTIG: Regelmäßiges Update, damit neue Mints sofort sichtbar sind
+    refetchInterval: 3000, 
   });
 
   const handleSearch = () => {
@@ -125,6 +126,7 @@ export function ArchiveTable() {
                     <th className="text-left py-3 px-4 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
                       Status
                     </th>
+                    {/* NEUE SPALTE FÜR DEN ZORA-STATUS */}
                     <th className="text-left py-3 px-4 text-xs text-[#CBD5E1] font-medium uppercase tracking-wider">
                       NFT Supply
                     </th>
@@ -166,6 +168,7 @@ export function ArchiveTable() {
                           </Badge>
                         )}
                       </td>
+                      {/* NEUE LOGIK: Zeigt den Mint-Status an */}
                       <td className="py-2 px-4">
                         <div className="flex flex-col">
                            <span className={`text-sm font-mono font-bold ${item.mintCount >= 100 ? 'text-rose-500' : 'text-emerald-400'}`}>

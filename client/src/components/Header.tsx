@@ -1,8 +1,6 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import logoImage from "@assets/logo_final_1767063482143.png";
-// 1. Der neue Profi-Import
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 
 export function Header() {
   return (
@@ -30,16 +28,6 @@ export function Header() {
           </div>
         </div>
       </Link>
-
-      {/* 2. Der neue Connect-Button direkt unter dem Logo-Text */}
-      <div className="mt-8">
-        <ConnectButton 
-          label="Connect Wallet"
-          accountStatus="address"
-          chainStatus="icon"
-          showBalance={false}
-        />
-      </div>
     </motion.div>
   );
 }
