@@ -1,17 +1,23 @@
 import React from 'react';
 import { WagmiProvider, http } from 'wagmi';
-import { baseSepolia } from 'wagmi/chains';
+import { base, baseSepolia } from 'wagmi/chains'; // WICHTIG: Wir importieren jetzt BEIDE
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
 import { queryClient } from "@/lib/queryClient"; 
 import '@rainbow-me/rainbowkit/styles.css';
 
-// WICHTIG: Wir exportieren 'config', damit Capsule.tsx es importieren kann!
+// --- INTELLIGENTE WEICHE ---
+const isProduction = typeof window !== "undefined" && (window.location.hostname === "aevera.xyz" || window.location.hostname === "www.aevera.xyz");
+
+// Wir wählen die Chain basierend auf der Domain
+const activeChain = isProduction ? base : baseSepolia;
+
 export const config = getDefaultConfig({
   appName: 'AEVERA',
   projectId: '60bb29b162bfdc08e7238f46a70c726e',
-  chains: [baseSepolia],
+  chains: [activeChain], // Hier wird nur die eine, richtige Chain übergeben
   transports: {
+    [base.id]: http(),
     [baseSepolia.id]: http(),
   },
   ssr: false,

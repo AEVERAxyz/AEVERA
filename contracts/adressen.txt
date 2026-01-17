@@ -1,1 +1,2 @@
 AeveraVault (Base Sepolia): 0x3fF2CB8779Bad7a87A98Bd61756Fe4b392af855e
+AeveraVault (Base): 0x05c3f0451Fcde74903DF3d08f0fBD15c843FC426

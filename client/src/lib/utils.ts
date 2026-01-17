@@ -1,23 +1,27 @@
-// client/src/lib/utils.ts
-// Update V8.6: Contract Address update (Verified Contract)
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 
-// Class Mergers (Standard Shadcn Utils)
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// AEVERA CONFIGURATION
-// V8.6 Verified Contract (Base64 Fix + Narrative Update + Stack Optimization)
-export const CONTRACT_ADDRESS = "0x3fF2CB8779Bad7a87A98Bd61756Fe4b392af855e";
+// --- ADRESSEN KONFIGURATION ---
 
-// Source 63: Network Base (Layer 2) - Chain ID für Base Sepolia
-export const CHAIN_ID = 84532; 
+// Live (Base Mainnet) - DEIN NEUER CONTRACT:
+const MAINNET_ADDRESS = "0x05c3f0451Fcde74903DF3d08f0fBD15c843FC426"; 
 
-// Helper für Short-IDs (Source 77)
-export function formatShortId(uuid: string): string {
-    if (!uuid) return "";
-    return "#" + uuid.slice(0, 7).toUpperCase();
+// Dev (Base Sepolia) - DEIN TEST CONTRACT (V12):
+const TESTNET_ADDRESS = "0x3fF2CB8779Bad7a87A98Bd61756Fe4b392af855e";
+
+// --- INTELLIGENTE WEICHE ---
+// Erkennt automatisch anhand der Domain, wo wir sind.
+const isProduction = typeof window !== "undefined" && (window.location.hostname === "aevera.xyz" || window.location.hostname === "www.aevera.xyz");
+
+// Exportiert automatisch die richtige Adresse
+export const CONTRACT_ADDRESS = isProduction ? MAINNET_ADDRESS : TESTNET_ADDRESS;
+
+// Debug-Info in der Konsole (damit du siehst, wo du bist)
+if (typeof window !== "undefined") {
+  console.log(`%c AEVERA MODE: ${isProduction ? "PRODUCTION (Mainnet)" : "DEV (Sepolia)"} `, "background: #222; color: #bada55; font-size: 12px; padding: 4px; border-radius: 4px;");
+  console.log("Contract:", CONTRACT_ADDRESS);
 }
