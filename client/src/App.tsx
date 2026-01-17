@@ -1,55 +1,27 @@
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
-import Home from "@/pages/home";
-import CapsulePage from "@/pages/capsule";
+import { OnchainProviders } from "./OnchainProviders";
 
-// PROFIE-IMPORTS
-import { getDefaultConfig, RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
-import { WagmiProvider } from 'wagmi';
-import { base } from 'wagmi/chains';
-
-// 1. RainbowKit Konfiguration
-const config = getDefaultConfig({
-  appName: 'TimeCapsule',
-  projectId: 'YOUR_PROJECT_ID', 
-  chains: [base],
-  ssr: true,
-});
+// FIX: Importe angepasst an die neuen Dateinamen (PascalCase)
+import Home from "@/pages/Home";
+import CapsulePage from "@/pages/Capsule";
+import NotFound from "@/pages/NotFound";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/capsule/:id">
-        {(params) => <CapsulePage id={params.id} />}
-      </Route>
+      <Route path="/capsule/:id" component={CapsulePage} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-function App() {
+export default function App() {
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        {/* KORREKTUR: accentColorForeground statt accentColorTextColor */}
-        <RainbowKitProvider theme={darkTheme({
-          accentColor: '#1652F0', 
-          accentColorForeground: 'white',
-          borderRadius: 'medium',
-        })}>
-          <TooltipProvider>
-            <Router />
-            <Toaster />
-          </TooltipProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <OnchainProviders>
+      <Router />
+      <Toaster />
+    </OnchainProviders>
   );
 }
-
-export default App;

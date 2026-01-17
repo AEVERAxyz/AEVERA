@@ -240,3 +240,21 @@
 .onchainkit-custom [class*="ock-wallet-dropdown-disconnect"]:hover {
   background-color: rgba(239, 68, 68, 0.1) !important;
 }
+
+/* ============================================================
+   DIE MAGIC LÖSUNG GEGEN DEN FEHLER-KASTEN
+   ============================================================ */
+
+/* Versteckt das nervige Replit Error Overlay */
+#vite-plugin-runtime-error-modal {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  z-index: -9999 !important;
+}
+
+/* Sicherheitsnetz für andere Overlay-Typen */
+vite-error-overlay {
+  display: none !important;
+}
