@@ -15,8 +15,10 @@ import { useWriteContract, useWaitForTransactionReceipt, useAccount, useSwitchCh
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { CustomConnectButton } from "@/components/CustomConnectButton";
 import AeveraVaultABI from "../abis/AeveraVaultABI.json";
-import { CONTRACT_ADDRESS } from "../lib/utils";
 import { fromHex, isHex, formatEther } from "viem";
+
+// --- CONFIG IMPORTIEREN ---
+import { APP_CONFIG } from "../lib/config";
 
 // --- DRAND LIBRARY & CONFIG ---
 import { timelockDecrypt } from "tlock-js";
@@ -80,7 +82,8 @@ function NFTDetailModal({ nft, capsule, isOpen, onClose }: { nft: MintEventData 
         setError(null);
         try {
             const uriResult = await readContract(config, {
-                address: CONTRACT_ADDRESS as `0x${string}`,
+                // UPDATE: Config Address
+                address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
                 abi: AeveraVaultABI,
                 functionName: 'uri',
                 args: [capsule.id]
@@ -194,8 +197,9 @@ function NFTDetailModal({ nft, capsule, isOpen, onClose }: { nft: MintEventData 
                         </div>
                     </div>
                     <div className="p-6 border-t border-white/5 bg-[#050A15]">
-                        <a href={`https://sepolia.basescan.org/tx/${nft.txHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black hover:bg-slate-200 font-bold rounded-lg transition-colors text-sm uppercase tracking-wide">
-                            VIEW ON BASESCAN <ExternalLink className="w-4 h-4 ml-2" />
+                        {/* UPDATE: Dynamic Explorer Link from Config */}
+                        <a href={`${APP_CONFIG.EXPLORER_URL}/tx/${nft.txHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black hover:bg-slate-200 font-bold rounded-lg transition-colors text-sm uppercase tracking-wide">
+                            VIEW ON BLOCKCHAIN <ExternalLink className="w-4 h-4 ml-2" />
                         </a>
                     </div>
                 </div>
@@ -257,7 +261,6 @@ function CountdownTimer({ targetDate, onComplete }: { targetDate: number | null,
 // ------------------------------------------------------------------
 // 3. REVEALED MESSAGE
 // ------------------------------------------------------------------
-// UPDATE: Added hasAccess prop to handle token gating logic cleanly
 function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsuleId, isRevealed, isPrivate, onDecrypt, needsPassword, onTimerEnd, isDecrypting, hasAccess, openConnectModal, isConnected }: any) {
 
   const colors = {
@@ -404,7 +407,6 @@ function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsul
                     <div className="w-full h-full overflow-y-auto custom-scrollbar relative">
                         {message ? (
                              <div className="min-h-full flex flex-col items-center justify-center px-12 py-8 text-center">
-                                 {/* FIX: Reduced font size from text-2xl to text-lg/xl for better readability */}
                                  <p className="text-lg md:text-xl leading-relaxed text-white font-serif italic whitespace-pre-wrap">
                                    "{message}"
                                  </p>
@@ -495,8 +497,9 @@ function CapsuleContent() {
           }
           try {
               // Check balance for this specific capsule ID
+              // UPDATE: Config Address
               const balance = await readContract(config, {
-                  address: CONTRACT_ADDRESS as `0x${string}`,
+                  address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
                   abi: AeveraVaultABI,
                   functionName: 'balanceOf',
                   args: [address, capsule.id]
@@ -525,17 +528,18 @@ function CapsuleContent() {
             // DIRECT LOOKUP (V7.2)
             let tokenId = 0n;
 
-            const idFromShort = await readContract(config, { address: CONTRACT_ADDRESS, abi: AeveraVaultABI, functionName: 'idByShortId', args: [searchId] }) as bigint;
+            // UPDATE: Config Address
+            const idFromShort = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'idByShortId', args: [searchId] }) as bigint;
             if (idFromShort > 0n) tokenId = idFromShort;
             else {
-                const idFromUuid = await readContract(config, { address: CONTRACT_ADDRESS, abi: AeveraVaultABI, functionName: 'idByUuid', args: [searchId] }) as bigint;
+                const idFromUuid = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'idByUuid', args: [searchId] }) as bigint;
                 if (idFromUuid > 0n) tokenId = idFromUuid;
             }
 
             if (tokenId === 0n) {
                 try {
                     const directId = BigInt(searchId);
-                    const nextId = await readContract(config, { address: CONTRACT_ADDRESS, abi: AeveraVaultABI, functionName: 'nextTokenId' }) as bigint;
+                    const nextId = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'nextTokenId' }) as bigint;
                     if (directId > 0n && directId < nextId) tokenId = directId;
                 } catch(e) {}
             }
@@ -547,14 +551,9 @@ function CapsuleContent() {
                 return;
             }
 
-            const data: any = await readContract(config, { address: CONTRACT_ADDRESS, abi: AeveraVaultABI, functionName: 'capsules', args: [tokenId] });
+            const data: any = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'capsules', args: [tokenId] });
 
             let content = ""; // Das ist jetzt der Ciphertext (Salat)
-
-            // --- FIX FOR DATA SHIFTING ---
-            // Data indices (from Solidity Struct):
-            // 0: id, 1: uuid, 2: shortId, 3: author, 4: creator (NEW!), 
-            // 5: content, 6: mintTimestamp, 7: unlockTimestamp, 8: isPrivate, 9: currentSupply
 
             const nowSec = Math.floor(Date.now() / 1000);
             const unlockTime = Number(data[7]); // Shifted from 6 to 7
@@ -564,7 +563,8 @@ function CapsuleContent() {
             // Wenn revealed, holen wir den verschlüsselten String
             if (isRevealed || isPrivate) {
                 try {
-                    const contentResult = await readContract(config, { address: CONTRACT_ADDRESS, abi: AeveraVaultABI, functionName: 'getCapsuleContent', args: [tokenId] }) as string;
+                    // UPDATE: Config Address
+                    const contentResult = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'getCapsuleContent', args: [tokenId] }) as string;
                     content = contentResult;
                 } catch (err) {}
             }
@@ -711,9 +711,9 @@ function CapsuleContent() {
 
   const handleMint = () => {
       if(!capsule) return;
-      // FIX: Wallet Error - Cast Contract Address & Ensure BigInt Arg (Updated for Batch Minting)
+      // UPDATE: Config Address
       writeContract({ 
-          address: CONTRACT_ADDRESS as `0x${string}`, 
+          address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, 
           abi: AeveraVaultABI, 
           functionName: 'mintCopy', 
           args: [capsule.id, BigInt(quantity)], 
@@ -745,9 +745,10 @@ function CapsuleContent() {
   useEffect(() => { const updateScale = () => { if (containerRef.current) { const availableWidth = containerRef.current.offsetWidth; if ((availableWidth - 32) < 600) setScale((availableWidth - 32) / 600); else setScale(1); } }; updateScale(); window.addEventListener("resize", updateScale); return () => window.removeEventListener("resize", updateScale); }, []);
 
   // --- SHARE FUNCTIONS FOR MINT POPUP ---
+  // UPDATE: Hier nutzen wir window.location.origin für dynamische Links
   const handleShareWarpcastMint = () => {
       if(!capsule) return;
-      const url = `https://aevera.xyz/capsule/${capsule.shortId}`;
+      const url = `${window.location.origin}/capsule/${capsule.shortId}`;
       const text = `I just minted an eternal artifact on @aevera. 
 A piece of history secured on Base. 🔵 #AEVERA
 
@@ -758,7 +759,7 @@ Mint yours here:`;
 
   const handleShareXMint = () => {
       if(!capsule) return;
-      const url = `https://aevera.xyz/capsule/${capsule.shortId}`;
+      const url = `${window.location.origin}/capsule/${capsule.shortId}`;
       const text = `I just minted an eternal artifact on @AEVERAxyz.\nA piece of history secured on @base. 🔵 #AEVERA\n\nMint yours here:`;
       const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
       window.open(shareUrl, '_blank');
@@ -766,7 +767,7 @@ Mint yours here:`;
 
   const handleCopyLinkMint = () => {
       if(!capsule) return;
-      const url = `https://aevera.xyz/capsule/${capsule.shortId}`;
+      const url = `${window.location.origin}/capsule/${capsule.shortId}`;
       navigator.clipboard.writeText(url);
       toast({ title: "Copied", description: "Link copied to clipboard." });
   };
@@ -891,7 +892,8 @@ Mint yours here:`;
 
                         {/* Mint Button */}
                         {!isConnected ? <Button onClick={openConnectModal} className="flex-1 bg-slate-800 text-white font-bold h-12 rounded-xl">CONNECT WALLET</Button> 
-                        : chain?.id !== 84532 ? <Button onClick={() => switchChain({ chainId: 84532 })} className="flex-1 bg-orange-500 text-white font-bold h-12 rounded-xl">SWITCH TO BASE SEPOLIA</Button> 
+                        // UPDATE: Check against Config Chain
+                        : chain?.id !== APP_CONFIG.ACTIVE_CHAIN.id ? <Button onClick={() => switchChain({ chainId: APP_CONFIG.ACTIVE_CHAIN.id })} className="flex-1 bg-orange-500 text-white font-bold h-12 rounded-xl">SWITCH NETWORK</Button> 
                         : <Button 
                             onClick={handleMint} 
                             disabled={isSoldOut || isWritePending || isConfirming || !canMint} 
@@ -955,8 +957,9 @@ Mint yours here:`;
                                       </Button>
 
                                       {/* PROOF */}
+                                      {/* UPDATE: Dynamic Explorer Link from Config */}
                                       <Button 
-                                        onClick={() => window.open(`https://sepolia.basescan.org/tx/${mintSuccessHash}`, '_blank')} 
+                                        onClick={() => window.open(`${APP_CONFIG.EXPLORER_URL}/tx/${mintSuccessHash}`, '_blank')} 
                                         className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 h-12 font-bold rounded-xl"
                                       >
                                           PROOF <ExternalLink size={16} className="ml-2"/>

@@ -22,10 +22,11 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
     uint256 public constant MAX_SUPPLY_PUBLIC = 100;
     uint256 public constant MAX_SUPPLY_PRIVATE = 1000;
 
-    // NEU: TRANSACTION LIMITS (Max pro Klick)
+    // TRANSACTION LIMITS (Max pro Klick)
     uint256 public constant MAX_BATCH_PUBLIC = 5;
     uint256 public constant MAX_BATCH_PRIVATE = 50;
 
+    // Reentrancy Guard (Sicherheit gegen Hacks bei Auszahlungen)
     uint256 private _guardStatus;
     modifier nonReentrant() {
         require(_guardStatus == 0, "Reentrancy");
@@ -38,8 +39,8 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
         uint256 id;
         string uuid;
         string shortId;
-        string author; // Der Anzeigename (String)
-        address creator; // NEU: Die Wallet-Adresse des Erstellers (für Security Check)
+        string author;   // Der visuelle Name (z.B. "gelassen.base.eth")
+        address creator; // SECURITY: Die unwiderrufliche Wallet-Adresse des Erstellers
         string content;
         uint256 mintTimestamp;
         uint256 unlockTimestamp;
@@ -57,7 +58,7 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
     event CapsuleMinted(uint256 indexed id, address indexed minter, uint256 amount);
 
     constructor() Ownable(msg.sender) ERC1155("") {
-        // SET ROYALTIES: 7.77% (777 Basis Points)
+        // SET ROYALTIES: 7.77% (777 Basis Points) für Secondary Market
         _setDefaultRoyalty(msg.sender, 777);
     }
 
@@ -87,8 +88,8 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
             id: newTokenId,
             uuid: _uuid,
             shortId: _shortId,
-            author: _author,       // Visueller Name
-            creator: msg.sender,   // NEU: Wallet Adresse speichern
+            author: _author,       // Dies ist der Anzeigename
+            creator: msg.sender,   // SECURITY: Hier wird die Identität kryptografisch verankert
             content: _content,
             mintTimestamp: block.timestamp,
             unlockTimestamp: _unlockTimestamp,
@@ -104,7 +105,6 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
         nextTokenId++;
     }
 
-    // UPDATE: Supports batch minting with LIMITS & AUTHOR CHECK for Private
     function mintCopy(uint256 _tokenId, uint256 _amount) public payable nonReentrant {
         require(_amount > 0, "Amount > 0");
         require(msg.value >= MINT_PRICE * _amount, "ETH low");
@@ -112,7 +112,8 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
 
         Capsule storage cap = capsules[_tokenId];
 
-        // 1. Author Check for Private Vaults (FIXED: Nutzt jetzt creator Adresse)
+        // 1. Author Check for Private Vaults
+        // SECURITY: Nur die Adresse, die die Kapsel erstellt hat, darf private Kopien minten.
         if (cap.isPrivate) {
             require(msg.sender == cap.creator, "Private: Author only");
         }
@@ -228,7 +229,6 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
     }
 
     function _renderFooter(bool isPrivate, string memory c1) internal pure returns (string memory) {
-        // FIX: Replaced "&" with "&amp;" to prevent SVG breakage
         string memory footerText = isPrivate ? "Restricted to NFT holder &amp; Key." : "Open to the world after Reveal Era.";
 
         return string(abi.encodePacked(

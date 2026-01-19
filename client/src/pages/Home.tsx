@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useEnsName } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi'; // useSwitchChain hinzugefügt
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { Loader2, Globe, Lock, Eye, EyeOff, AlertTriangle, Upload, UserCircle2, Calendar, ArrowRight, CheckCircle, ShieldCheck, Link as LinkIcon, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,23 +24,21 @@ import { timelockEncrypt, roundAt } from "tlock-js";
 // --- NEUER ABI IMPORT ---
 import AeveraVaultABI from "../abis/AeveraVaultABI.json";
 
-// --- ZENTRALE ADRESSE IMPORTIEREN ---
-import { CONTRACT_ADDRESS } from "../lib/utils";
+// --- CONFIG & UTILS IMPORTIEREN ---
+import { APP_CONFIG } from "../lib/config";
+import { getVerifiedBaseName, getVerifiedEnsName } from "../lib/utils";
 
-// --- DRAND CONFIGURATION (Standard League of Entropy Quicknet) ---
+// --- DRAND CONFIGURATION ---
 const CHAIN_HASH = "52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971";
 const DRAND_URL = "https://api.drand.sh";
 
-// --- HELPER ICONS (Custom SVGs für exaktes Branding) ---
-
-// 1. Farcaster Icon (Offizielles Arch Logo - Blockig & Fett)
+// --- HELPER ICONS ---
 const FarcasterIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
     <path d="M4 6C4 4.89543 4.89543 4 6 4H18C19.1046 4 20 4.89543 20 6V19C20 19.5523 19.5523 20 19 20H15C14.4477 20 14 19.5523 14 19V13H10V19C10 19.5523 9.55228 20 9 20H5C4.44772 20 4 19.5523 4 19V6Z" />
   </svg>
 );
 
-// 2. X (Twitter) Icon
 const XIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231h0.001Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
@@ -53,7 +51,6 @@ function formatUTC(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) + ' UTC';
 }
 
-// Generiert eine kurze ID wie "576sg4"
 const generateShortId = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
 export default function Home() {
@@ -61,7 +58,6 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [sealerName, setSealerName] = useState("");
 
-  // DATUM STATE
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [localDateTimeString, setLocalDateTimeString] = useState("");
 
@@ -71,23 +67,51 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [statusText, setStatusText] = useState("");
 
-  // SUCCESS STATE
   const [successData, setSuccessData] = useState<{uuid: string, shortId: string, txHash: string} | null>(null);
-  // TRIGGER FÜR TABELLEN UPDATE
   const [archiveRefreshTrigger, setArchiveRefreshTrigger] = useState(0);
 
-  // IDs
   const [currentUuid, setCurrentUuid] = useState("");
   const [currentShortId, setCurrentShortId] = useState("");
 
+  // --- IDENTITY STATES ---
+  const [resolvedBaseName, setResolvedBaseName] = useState<string | null>(null);
+  const [resolvedEnsName, setResolvedEnsName] = useState<string | null>(null);
+
   // WEB3 HOOKS
-  const { isConnected, address } = useAccount();
-  const { data: ensName } = useEnsName({ address });
+  const { isConnected, address, chain } = useAccount(); // chain hinzugefügt
   const { openConnectModal } = useConnectModal();
+  const { switchChain } = useSwitchChain(); // Hook für Netzwerkwechsel hinzugefügt
 
-  // Reset Funktion vom Hook holen
+  // --- IDENTITY RESOLVER (Hybrid: Alchemy via Utils) ---
+  useEffect(() => {
+    async function fetchIdentities() {
+      if (!address) {
+        setResolvedBaseName(null);
+        setResolvedEnsName(null);
+        return;
+      }
+
+      console.log("🔍 Starting Identity Lookup via Alchemy Telescope...");
+      try {
+        // Parallel abrufen
+        const [baseName, ensName] = await Promise.all([
+            getVerifiedBaseName(address),
+            getVerifiedEnsName(address)
+        ]);
+
+        console.log("✅ Identity Lookup Finished:", { baseName, ensName });
+
+        if (baseName) setResolvedBaseName(baseName);
+        if (ensName) setResolvedEnsName(ensName);
+      } catch (e) {
+        console.error("❌ Identity Fetch Error:", e);
+      }
+    }
+    fetchIdentities();
+  }, [isConnected, address]);
+
+  // Wallet Actions
   const { writeContract, data: hash, isPending, reset: resetWagmi } = useWriteContract();
-
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
   const { toast } = useToast();
 
@@ -97,27 +121,40 @@ export default function Home() {
     return now.toISOString().slice(0, 16);
   };
 
+  // Dropdown Logic
   const getAvailableIdentities = () => {
     if (!address) return [];
     const options = [];
-    if (ensName) {
-        options.push({ value: ensName, label: `${ensName} (Base/ENS)` });
-    }
     const shortAddr = `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+    if (resolvedBaseName) {
+        options.push({ value: resolvedBaseName, label: `🔹 ${resolvedBaseName} (Base)` });
+    }
+    if (resolvedEnsName && resolvedEnsName !== resolvedBaseName) {
+        options.push({ value: resolvedEnsName, label: `🔹 ${resolvedEnsName} (ENS)` });
+    }
     options.push({ value: shortAddr, label: `${shortAddr} (Wallet)` });
     return options;
   };
 
+  // Auto-Select Identity
   useEffect(() => {
     if (isConnected && address) {
-        if (!sealerName) {
-            const shortAddr = `${address.slice(0, 6)}...${address.slice(-4)}`;
-            setSealerName(ensName || shortAddr);
+        const shortAddr = `${address.slice(0, 6)}...${address.slice(-4)}`;
+        // WICHTIG: Hier prüfen wir, ob die Namen da sind
+        if (resolvedBaseName) {
+            console.log("🎯 Auto-selecting Base Name:", resolvedBaseName);
+            setSealerName(resolvedBaseName);
         }
+        else if (resolvedEnsName) {
+            console.log("🎯 Auto-selecting ENS Name:", resolvedEnsName);
+            setSealerName(resolvedEnsName);
+        }
+        else if (!sealerName) setSealerName(shortAddr);
     } else {
         setSealerName("");
     }
-  }, [isConnected, address, ensName, sealerName]);
+  }, [isConnected, address, resolvedEnsName, resolvedBaseName]);
 
   useEffect(() => {
     setCurrentUuid(uuidv4());
@@ -126,7 +163,6 @@ export default function Home() {
 
   // --- SEAL HANDLER ---
   const handleSeal = async () => {
-
     if (!message || !selectedDate) {
       toast({ title: "Incomplete", description: "Please fill out message and date.", variant: "destructive" });
       return;
@@ -154,7 +190,6 @@ export default function Home() {
     setStatusText("Preparing Encryption...");
 
     try {
-      // 1. ZWIEBELSCHICHT 1: PASSWORD (AES)
       let payloadString = message;
 
       if (mode === "private") {
@@ -162,7 +197,6 @@ export default function Home() {
           payloadString = CryptoJS.AES.encrypt(message, password).toString();
       }
 
-      // 2. ZWIEBELSCHICHT 2: TIME-LOCK (DRAND)
       setStatusText("Applying Layer 2: Time-Lock...");
 
       const response = await fetch(`${DRAND_URL}/${CHAIN_HASH}/info`);
@@ -170,13 +204,10 @@ export default function Home() {
       const chainInfo = await response.json();
 
       const round = roundAt(selectedDate.getTime(), chainInfo);
-
       const payloadBytes = new TextEncoder().encode(payloadString);
 
       const safeClient = {
-          chain: () => ({
-              info: () => Promise.resolve(chainInfo)
-          })
+          chain: () => ({ info: () => Promise.resolve(chainInfo) })
       };
 
       const finalCiphertext = await timelockEncrypt(
@@ -185,14 +216,13 @@ export default function Home() {
         safeClient as any
       );
 
-      // 3. ANCHORING (Blockchain)
       setStatusText("Anchoring to Blockchain...");
 
       const unlockTimestamp = Math.floor(selectedDate.getTime() / 1000);
       const isPrivateBool = mode === "private";
 
       writeContract({
-        address: CONTRACT_ADDRESS,
+        address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
         abi: AeveraVaultABI,
         functionName: 'createCapsule',
         args: [
@@ -232,15 +262,11 @@ export default function Home() {
       });
       setIsGenerating(false);
       setStatusText("");
-
-      // Update Archive Table
       setArchiveRefreshTrigger(prev => prev + 1);
-
       toast({ title: "Eternalized!", description: "Message anchored on-chain forever.", className: "bg-green-600 text-white" });
     }
   }, [isConfirmed, hash, currentUuid, currentShortId, toast]);
 
-  // --- RESET FUNCTION ---
   const resetForm = () => {
       resetWagmi();
       setMessage("");
@@ -253,23 +279,18 @@ export default function Home() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- SHARING LOGIC (Intelligent Text Generation) ---
+  // --- SHARING LOGIC ---
   const getShareText = (platform: 'x' | 'farcaster') => {
       if(!successData) return "";
 
-      const capsuleUrl = `https://aevera.xyz/capsule/${successData.shortId}`;
-      const homeUrl = `https://aevera.xyz`;
+      const capsuleUrl = `${window.location.origin}/capsule/${successData.shortId}`;
+      const homeUrl = window.location.origin;
       const baseHandle = '@base';
-
-      // Richtiger Handle je nach Plattform
       const appHandle = platform === 'farcaster' ? '@aevera' : '@AEVERAxyz';
 
-      // Textlogik basierend auf Public/Private
       if (mode === 'private') {
-          // PRIVATE TEXT
           return `I just secured a Private Vault on ${appHandle}. 🔒\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nView my vault: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
       } else {
-          // PUBLIC TEXT
           return `I just anchored a message in time on ${appHandle}. ⏳\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nMint my legacy as NFT: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
       }
   };
@@ -277,8 +298,6 @@ export default function Home() {
   const handleShareWarpcast = () => {
       if(!successData) return;
       const text = getShareText('farcaster');
-      // Warpcast Intent: wir packen den Text in den Body.
-      // Hinweis: Warpcast parsed Links im Text automatisch.
       const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}`;
       window.open(shareUrl, '_blank');
   };
@@ -292,7 +311,7 @@ export default function Home() {
 
   const handleCopyLink = () => {
       if(!successData) return;
-      const url = `https://aevera.xyz/capsule/${successData.shortId}`;
+      const url = `${window.location.origin}/capsule/${successData.shortId}`;
       navigator.clipboard.writeText(url);
       toast({ title: "Copied", description: "Capsule link copied to clipboard." });
   };
@@ -301,9 +320,9 @@ export default function Home() {
     <div className="min-h-screen w-full flex flex-col items-center p-4 md:p-8 bg-[#050A15] relative overflow-x-hidden font-sans selection:bg-blue-500/30">
 
        <style>{`
-         .archive-table-container table { border-collapse: separate; border-spacing: 0; width: 100%; }
-         .archive-table-container th { position: sticky; top: 0; z-index: 10; background-color: #0d121f; border-bottom: 1px solid rgba(255,255,255,0.1); }
-         input[type="datetime-local"]::-webkit-calendar-picker-indicator { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+          .archive-table-container table { border-collapse: separate; border-spacing: 0; width: 100%; }
+          .archive-table-container th { position: sticky; top: 0; z-index: 10; background-color: #0d121f; border-bottom: 1px solid rgba(255,255,255,0.1); }
+          input[type="datetime-local"]::-webkit-calendar-picker-indicator { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
        `}</style>
 
        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10">
@@ -319,22 +338,15 @@ export default function Home() {
       <main className="w-full max-w-3xl px-4 flex flex-col gap-8 relative z-10">
 
         {successData ? (
-            // --- SUCCESS POPUP ---
             <Card className="bg-black/40 border-white/10 overflow-hidden backdrop-blur-md animate-in fade-in zoom-in-95 duration-500 shadow-2xl relative">
                 <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 bg-gradient-to-b ${mode === 'private' ? 'from-purple-500/10' : 'from-blue-500/10'} to-transparent blur-3xl`}></div>
                 <div className={`h-1.5 w-full bg-gradient-to-r ${mode === 'private' ? 'from-purple-600 via-pink-500 to-purple-600' : 'from-blue-500 via-cyan-400 to-blue-600'}`}></div>
 
                 <CardContent className="pt-16 pb-12 text-center flex flex-col items-center relative z-10">
-
-                    {/* VISUAL HERO ANCHOR */}
                     <div className="mb-8 relative">
                         <div className={`absolute inset-0 ${mode === 'private' ? 'bg-purple-500/20' : 'bg-blue-500/20'} blur-2xl rounded-full`}></div>
                         <div className={`relative w-24 h-24 rounded-full border-2 ${mode === 'private' ? 'border-purple-500/50 bg-purple-950/30 text-purple-400' : 'border-blue-500/50 bg-blue-950/30 text-blue-400'} flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)]`}>
-                            {mode === 'private' ? (
-                                <ShieldCheck size={48} strokeWidth={1.5} />
-                            ) : (
-                                <Globe size={48} strokeWidth={1.5} />
-                            )}
+                            {mode === 'private' ? <ShieldCheck size={48} strokeWidth={1.5} /> : <Globe size={48} strokeWidth={1.5} />}
                             <div className="absolute -bottom-2 -right-2 bg-green-500 text-black p-1.5 rounded-full border border-black shadow-lg">
                                 <CheckCircle size={16} strokeWidth={3} />
                             </div>
@@ -349,11 +361,8 @@ export default function Home() {
                         Your message has been encrypted and anchored on the Base blockchain. It is now beyond time.
                     </p>
 
-                    {/* ACTION BUTTONS (Updated with Equal Width Buttons) */}
                     <div className="flex flex-col w-full max-w-sm gap-3">
-
                         <div className="flex gap-2 w-full">
-                            {/* PRIMARY: Open Page (flex-1) */}
                             <Button
                                 onClick={() => window.location.href = `/capsule/${successData.shortId}`}
                                 className={`flex-1 h-14 text-base md:text-lg font-bold bg-gradient-to-r ${mode === 'private' ? 'from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/20' : 'from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/20'} text-white rounded-xl shadow-lg transition-all hover:scale-[1.02]`}
@@ -361,9 +370,8 @@ export default function Home() {
                                 Open Capsule Page <ArrowRight className="ml-2 w-5 h-5" />
                             </Button>
 
-                            {/* SECONDARY: Proof (flex-1 for equal width) */}
                             <Button 
-                                onClick={() => window.open(`https://sepolia.basescan.org/tx/${successData.txHash}`, '_blank')} 
+                                onClick={() => window.open(`${APP_CONFIG.EXPLORER_URL}/tx/${successData.txHash}`, '_blank')} 
                                 className="flex-1 h-14 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold transition-all"
                                 title="View Transaction Proof"
                             >
@@ -371,20 +379,14 @@ export default function Home() {
                             </Button>
                         </div>
 
-                        {/* SOCIAL ROW */}
                         <div className="grid grid-cols-4 gap-2 w-full">
-                            {/* Warpcast (Main Base Social) */}
                             <Button onClick={handleShareWarpcast} className="col-span-2 bg-[#855DCD] hover:bg-[#976fe0] text-white border-0 h-12 rounded-xl flex items-center gap-2" title="Share on Farcaster (Base Social)">
                                 <FarcasterIcon className="w-5 h-5" /> 
                                 <span className="font-bold">Farcaster</span>
                             </Button>
-
-                            {/* X (Twitter) */}
                             <Button onClick={handleShareX} className="bg-white/5 hover:bg-white/10 text-white border border-white/10 h-12 rounded-xl" title="Share on X">
                                 <XIcon className="w-5 h-5" />
                             </Button>
-
-                            {/* Copy Link */}
                             <Button onClick={handleCopyLink} className="bg-white/5 hover:bg-white/10 text-white border border-white/10 h-12 rounded-xl" title="Copy Link">
                                 <LinkIcon className="w-5 h-5" />
                             </Button>
@@ -399,7 +401,6 @@ export default function Home() {
                 </CardContent>
             </Card>
         ) : (
-            // --- MAIN FORM ---
             <Tabs defaultValue="public" onValueChange={(v) => setMode(v as any)} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 mb-6 p-1 rounded-xl">
                 <TabsTrigger value="public" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg transition-all duration-300">
@@ -414,19 +415,16 @@ export default function Home() {
                 <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r transition-colors duration-500 ${mode === 'public' ? 'from-cyan-400 to-blue-600' : 'from-purple-400 to-pink-600'}`}></div>
 
                 <CardContent className="space-y-6 pt-8 flex-1 flex flex-col">
-
                 <div className={`p-4 rounded-xl border transition-colors duration-500 ${mode === 'public' ? 'bg-blue-900/20 border-blue-500/30' : 'bg-purple-900/20 border-purple-500/30'}`}>
                     <h3 className={`font-bold flex items-center gap-2 text-lg ${mode === 'public' ? 'text-blue-400' : 'text-purple-400'}`}>
                     {mode === 'public' ? <Globe size={20}/> : <Lock size={20}/>}
                     {mode === 'public' ? "Public Broadcast" : "Private Vault"}
                     </h3>
-
                     <p className="text-sm text-slate-300 mt-2 leading-relaxed">
                     {mode === 'public'
                         ? "Time-Locked. Once revealed, anyone can read it. A legacy for the world."
                         : "Password Protected & Time-Locked. Double Layer Security. Absolute Privacy."}
                     </p>
-
                     <div className="mt-3 text-[10px] font-mono opacity-80 border-t border-white/10 pt-2 uppercase tracking-wide flex flex-wrap gap-2 text-slate-400">
                     <span className="text-white">Capsule sealing is free</span>
                     <span>|</span>
@@ -525,14 +523,20 @@ export default function Home() {
                     </p>
                     </div>
                 )}
-
                 </CardContent>
 
                 <CardFooter className="pb-8 pt-2 flex gap-3">
-
                 {!isConnected ? (
                     <Button onClick={openConnectModal} className="flex-1 h-14 text-lg font-bold bg-slate-800 hover:bg-slate-700 rounded-xl transition-all">
                     Connect Wallet to Seal
+                    </Button>
+                ) : chain?.id !== APP_CONFIG.ACTIVE_CHAIN.id ? (
+                    // NEU: Netzwerk-Check hinzugefügt
+                    <Button 
+                        onClick={() => switchChain({ chainId: APP_CONFIG.ACTIVE_CHAIN.id })} 
+                        className="flex-1 h-14 text-lg font-bold bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-all shadow-lg shadow-orange-500/20"
+                    >
+                        Switch to {APP_CONFIG.ACTIVE_CHAIN.name}
                     </Button>
                 ) : (
                     <Button
@@ -552,7 +556,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* FIX: Layout-Anpassung (-mb-20 für negativen Margin Trick beim Footer) */}
       <div className="w-full mt-16 -mb-20">
         {/* FIX: key sorgt dafür, dass die Tabelle neu geladen wird */}
         <ArchiveTable key={archiveRefreshTrigger} />

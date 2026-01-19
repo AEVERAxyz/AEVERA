@@ -5,16 +5,17 @@ import { Search, Loader2, Unlock, Globe, Shield, ExternalLink, Timer, Layers } f
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
-import { CONTRACT_ADDRESS, cn } from "@/lib/utils"; 
+import { cn } from "@/lib/utils"; 
 import AeveraVaultABI from "@/abis/AeveraVaultABI.json"; 
+import { APP_CONFIG } from "@/lib/config"; // Das neue Gehirn
 
 export function ArchiveTable() {
   const [search, setSearch] = useState("");
   const [, setLocation] = useLocation();
 
-  // 1. Hole 'nextTokenId' (Alle 3s aktualisieren)
+  // 1. Hole 'nextTokenId' (Alle 3s aktualisieren) - Jetzt aus der Config
   const { data: nextTokenId, isLoading: isCountLoading } = useReadContract({
-    address: CONTRACT_ADDRESS as `0x${string}`,
+    address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
     abi: AeveraVaultABI,
     functionName: "nextTokenId", 
     query: { refetchInterval: 3000 }
@@ -36,7 +37,7 @@ export function ArchiveTable() {
   // 3. Batch Fetching der Kapsel-Daten (Standard Read - Schnell & Stabil)
   const { data: rawCapsuleData, isLoading: isDataLoading } = useReadContracts({
     contracts: capsuleIds.map((id) => ({
-      address: CONTRACT_ADDRESS as `0x${string}`,
+      address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, // Config nutzt autom. das richtige Netz
       abi: AeveraVaultABI as any,
       functionName: "capsules",
       args: [id],
@@ -180,7 +181,7 @@ export function ArchiveTable() {
                       processedCapsules.map((capsule) => {
                         if(!capsule) return null;
 
-                        // Max Supply Berechnung
+                        // Max Supply Berechnung (Config nutzen wäre hier auch möglich, aber hardcoded ist ok da Konstanten)
                         const maxSupply = capsule.isPrivate ? 1000 : 100;
 
                         return (
@@ -225,9 +226,10 @@ export function ArchiveTable() {
                             </td>
 
                              {/* TAUSCH: Proof Link hier (links von Minted) */}
+                             {/* UPDATE: Dynamischer Link aus der Config */}
                              <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
                                 <a 
-                                  href={`https://sepolia.basescan.org/token/${CONTRACT_ADDRESS}?a=${capsule.id.toString()}`}
+                                  href={`${APP_CONFIG.EXPLORER_URL}/token/${APP_CONFIG.CONTRACT_ADDRESS}?a=${capsule.id.toString()}`}
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-500 hover:text-[#1652F0] transition-colors group/link"

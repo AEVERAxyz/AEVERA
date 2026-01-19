@@ -1,24 +1,26 @@
 import React from 'react';
 import { WagmiProvider, http } from 'wagmi';
-import { base, baseSepolia } from 'wagmi/chains'; // WICHTIG: Wir importieren jetzt BEIDE
+import { base, baseSepolia } from 'wagmi/chains'; // Nur noch Base-Ketten importiert
 import { QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
-import { queryClient } from "@/lib/queryClient"; 
+import { queryClient } from "@/lib/queryClient";
 import '@rainbow-me/rainbowkit/styles.css';
 
-// --- INTELLIGENTE WEICHE ---
-const isProduction = typeof window !== "undefined" && (window.location.hostname === "aevera.xyz" || window.location.hostname === "www.aevera.xyz");
+// --- ZENTRALE CONFIG IMPORTIEREN ---
+import { APP_CONFIG } from "@/lib/config";
 
-// Wir wählen die Chain basierend auf der Domain
-const activeChain = isProduction ? base : baseSepolia;
+// --- NETZWERK-EINSCHRÄNKUNG ---
+// Wir erlauben NUR die aktive Kette in der UI. 
+// Dies verhindert, dass Ethereum oder andere Netze im Wallet-Menü erscheinen.
+const chains = [APP_CONFIG.ACTIVE_CHAIN] as const;
 
 export const config = getDefaultConfig({
   appName: 'AEVERA',
-  projectId: '60bb29b162bfdc08e7238f46a70c726e',
-  chains: [activeChain], // Hier wird nur die eine, richtige Chain übergeben
+  projectId: '60bb29b162bfdc08e7238f46a70c726e', // WalletConnect ID
+  chains,
   transports: {
-    [base.id]: http(),
-    [baseSepolia.id]: http(),
+    // Nutzt ausschließlich den Alchemy-Transport für die aktive Kette
+    [APP_CONFIG.ACTIVE_CHAIN.id]: http(APP_CONFIG.WALLET_TRANSPORT_URL),
   },
   ssr: false,
 });
@@ -27,13 +29,15 @@ export function OnchainProviders({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider 
+        <RainbowKitProvider
           theme={darkTheme({
-            accentColor: '#2563eb', // AEVERA Blau
+            accentColor: '#2563eb',
             accentColorForeground: 'white',
             borderRadius: 'medium',
           })}
           coolMode
+          // Erzwingt die korrekte Kette beim Verbinden
+          initialChain={APP_CONFIG.ACTIVE_CHAIN}
         >
           {children}
         </RainbowKitProvider>
