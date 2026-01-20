@@ -3,7 +3,7 @@ import { base, baseSepolia } from 'wagmi/chains';
 
 // --- UMWELT-ERKENNUNG ---
 // Erkennt automatisch, ob wir im Testnet (Replit/Dev) oder Mainnet sind.
-const isTestnet = false;
+const isTestnet =
   typeof window !== "undefined" && 
   (window.location.hostname.includes("testnet") || 
    window.location.hostname.includes("dev") || 

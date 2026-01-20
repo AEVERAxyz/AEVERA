@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi'; // useSwitchChain hinzugefügt
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi'; 
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { Loader2, Globe, Lock, Eye, EyeOff, AlertTriangle, Upload, UserCircle2, Calendar, ArrowRight, CheckCircle, ShieldCheck, Link as LinkIcon, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,9 @@ import { v4 as uuidv4 } from 'uuid';
 import CryptoJS from 'crypto-js';
 import { parseEther } from 'viem';
 
+// --- OFFICIAL BRAND ICONS (REACT-ICONS) ---
+import { SiFarcaster, SiX } from "react-icons/si";
+
 // --- DRAND TIMELOCK LIBRARY ---
 import { timelockEncrypt, roundAt } from "tlock-js";
 
@@ -31,19 +34,6 @@ import { getVerifiedBaseName, getVerifiedEnsName } from "../lib/utils";
 // --- DRAND CONFIGURATION ---
 const CHAIN_HASH = "52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971";
 const DRAND_URL = "https://api.drand.sh";
-
-// --- HELPER ICONS ---
-const FarcasterIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 6C4 4.89543 4.89543 4 6 4H18C19.1046 4 20 4.89543 20 6V19C20 19.5523 19.5523 20 19 20H15C14.4477 20 14 19.5523 14 19V13H10V19C10 19.5523 9.55228 20 9 20H5C4.44772 20 4 19.5523 4 19V6Z" />
-  </svg>
-);
-
-const XIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231h0.001Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
-  </svg>
-);
 
 // --- DATE HELPER ---
 function formatUTC(date: Date): string {
@@ -78,9 +68,9 @@ export default function Home() {
   const [resolvedEnsName, setResolvedEnsName] = useState<string | null>(null);
 
   // WEB3 HOOKS
-  const { isConnected, address, chain } = useAccount(); // chain hinzugefügt
+  const { isConnected, address, chain } = useAccount(); 
   const { openConnectModal } = useConnectModal();
-  const { switchChain } = useSwitchChain(); // Hook für Netzwerkwechsel hinzugefügt
+  const { switchChain } = useSwitchChain(); 
 
   // --- IDENTITY RESOLVER (Hybrid: Alchemy via Utils) ---
   useEffect(() => {
@@ -381,11 +371,11 @@ export default function Home() {
 
                         <div className="grid grid-cols-4 gap-2 w-full">
                             <Button onClick={handleShareWarpcast} className="col-span-2 bg-[#855DCD] hover:bg-[#976fe0] text-white border-0 h-12 rounded-xl flex items-center gap-2" title="Share on Farcaster (Base Social)">
-                                <FarcasterIcon className="w-5 h-5" /> 
+                                <SiFarcaster className="w-5 h-5" /> 
                                 <span className="font-bold">Farcaster</span>
                             </Button>
                             <Button onClick={handleShareX} className="bg-white/5 hover:bg-white/10 text-white border border-white/10 h-12 rounded-xl" title="Share on X">
-                                <XIcon className="w-5 h-5" />
+                                <SiX className="w-5 h-5" />
                             </Button>
                             <Button onClick={handleCopyLink} className="bg-white/5 hover:bg-white/10 text-white border border-white/10 h-12 rounded-xl" title="Copy Link">
                                 <LinkIcon className="w-5 h-5" />
