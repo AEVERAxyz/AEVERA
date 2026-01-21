@@ -9,14 +9,15 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      // Nur noch der Alias für den Client ist da. 
+      // @shared ist gelöscht, da wir kein Backend mehr haben.
       "@": path.resolve(rootDir, "client", "src"),
-      "@shared": path.resolve(rootDir, "shared"),
     },
   },
-  // 👇 WICHTIG: Wir zeigen wieder auf 'client', weil dort die index.html liegt
+  // Vite soll im 'client' Ordner starten (wo die index.html liegt)
   root: path.resolve(rootDir, "client"),
   build: {
-    // 👇 WICHTIG: Wir speichern das Ergebnis aber im Hauptordner 'dist'
+    // Das Ergebnis soll im Hauptordner 'dist' landen
     outDir: path.resolve(rootDir, "dist"),
     emptyOutDir: true,
   },
