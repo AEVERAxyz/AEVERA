@@ -1,13 +1,16 @@
 import { base, baseSepolia } from 'wagmi/chains';
-// Der Import von 'http' wurde entfernt, da wir hier nur die URL-Strings definieren.
 
 // --- UMWELT-ERKENNUNG ---
-// Erkennt automatisch, ob wir im Testnet (Replit/Dev) oder Mainnet sind.
 const isTestnet =
   typeof window !== "undefined" && 
   (window.location.hostname.includes("testnet") || 
    window.location.hostname.includes("dev") || 
    window.location.hostname.includes("replit"));
+
+// --- SECRET EXTRACTION ---
+// Wir holen nur den Schlüssel aus dem Tresor.
+// Der Code baut die Links dann unten selbst zusammen.
+const ALCHEMY_KEY = import.meta.env.VITE_ALCHEMY_API_KEY || "";
 
 // --- KONFIGURATION (Das Gehirn) ---
 export const APP_CONFIG = {
@@ -16,31 +19,29 @@ export const APP_CONFIG = {
   // Bestimmt das aktive Netzwerk für die Wallet-Verbindung
   ACTIVE_CHAIN: isTestnet ? baseSepolia : base,
 
-  // Zentrale Contract-Steuerung (Punkt 2)
+  // Zentrale Contract-Steuerung
   CONTRACT_ADDRESS: isTestnet 
     ? "0xF5dD7192fCB0e3025ef35d57ec189cd02a944B7B" 
     : "0xCa6a0b15ffB34680B5035A14B27909D134E07287",
 
   EXPLORER_URL: isTestnet ? "https://sepolia.basescan.org" : "https://basescan.org",
 
-  // --- TRANSPORT-LAYER (Punkt 4: Hybrid-Architektur) ---
+  // --- TRANSPORT-LAYER ---
 
-  // 1. PUBLIC RPC (Für Massendaten/Tabellen/Logs)
-  // Dies schont dein Alchemy-Kontingent und ist kostenlos.
+  // 1. PUBLIC RPC (Kostenlos, keine Gefahr)
   PUBLIC_RPC_URL: isTestnet 
     ? "https://sepolia.base.org" 
     : "https://mainnet.base.org",
 
-  // 2. WALLET TRANSPORT URL (Für Transaktionen/Minting)
-  // Wird in OnchainProviders.tsx in http() eingepackt.
+  // 2. WALLET TRANSPORT URL (Privat & Gesichert)
+  // Hier setzen wir den Schlüssel dynamisch ein.
   WALLET_TRANSPORT_URL: isTestnet
-    ? "https://base-sepolia.g.alchemy.com/v2/hFxU2M2sLj8BqUsGvgwOp"
-    : "https://base-mainnet.g.alchemy.com/v2/hFxU2M2sLj8BqUsGvgwOp",
+    ? `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
 
-  // --- IDENTITY TELESCOPE (NUR für Alchemy Identitäts-Check) ---
-  // Masterplan 10.1: Konsolidierter Key für alle Identity-Abfragen.
-  BASE_IDENTITY_URL: "https://base-mainnet.g.alchemy.com/v2/hFxU2M2sLj8BqUsGvgwOp",
-  ETH_IDENTITY_URL: "https://eth-mainnet.g.alchemy.com/v2/hFxU2M2sLj8BqUsGvgwOp", 
+  // --- IDENTITY TELESCOPE ---
+  BASE_IDENTITY_URL: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+  ETH_IDENTITY_URL: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`, 
 
   // --- APP LIMITS ---
   MAX_SUPPLY_PUBLIC: 100,
