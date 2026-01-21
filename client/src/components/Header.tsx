@@ -1,6 +1,5 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import logoImage from "@assets/logo_final_1767063482143.png";
 
 export function Header() {
   return (
@@ -13,9 +12,9 @@ export function Header() {
       <Link href="/">
         <div className="flex flex-col items-center cursor-pointer group">
 
-          {/* 1. Das Logo - Wieder das Originalbild */}
+          {/* 1. Das Logo - Jetzt direkt aus dem public Ordner */}
           <img
-            src={logoImage}
+            src="/logo.png"
             alt="AEVERA Logo"
             className="h-[140px] w-auto mb-[-12px] drop-shadow-[0_0_20px_rgba(22,82,240,0.6)] group-hover:scale-105 transition-transform duration-300"
           />
