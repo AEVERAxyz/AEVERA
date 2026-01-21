@@ -12,19 +12,21 @@ export default defineConfig({
       // Wir bauen die Pfade vom Hauptordner aus
       "@": path.resolve(rootDir, "client", "src"),
       "@shared": path.resolve(rootDir, "shared"),
-      "@assets": path.resolve(rootDir, "attached_assets"),
+      // @assets wurde entfernt, da der Ordner gelöscht wurde (Clean Code)
     },
   },
   // Vite soll im 'client' Ordner starten
   root: path.resolve(rootDir, "client"),
   build: {
-    outDir: path.resolve(rootDir, "dist/public"),
+    // WICHTIG: Wir speichern jetzt direkt in 'dist', passend zur neuen .replit Config
+    outDir: path.resolve(rootDir, "dist"),
     emptyOutDir: true,
   },
   server: {
     host: "0.0.0.0",
+    // 👇 Das ist der Schlüssel: Erlaubt Replit URLs
+    allowedHosts: true,
     hmr: {
-      // Deaktiviert das Fehler-Overlay, falls es stört
       overlay: false, 
     },
   },
