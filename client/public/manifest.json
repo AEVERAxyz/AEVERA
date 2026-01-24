@@ -1,0 +1,22 @@
+{
+  "name": "AEVERA",
+  "short_name": "AEVERA",
+  "description": "AEVERA | Beyond Time | Write encrypted messages to the future that can only be read when the time is right.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon-google.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/favicon-google.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
