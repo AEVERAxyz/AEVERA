@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
 
-    <link rel="icon" type="image/jpeg" href="/favicon-google.jpg" />
+    <link rel="icon" type="image/jpeg" sizes="512x512" href="/favicon-google.jpg" />
     <link rel="apple-touch-icon" href="/favicon-google.jpg" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,14 +17,26 @@
     <link rel="manifest" href="/manifest.json" />
 
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "AEVERA",
-      "alternateName": "AEVERA Protocol",
-      "url": "https://aevera.xyz/",
-      "image": "https://aevera.xyz/banner.jpg"
-    }
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "AEVERA",
+        "alternateName": ["AEVERA Protocol", "AEVERA | Beyond Time"],
+        "url": "https://aevera.xyz/"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "AEVERA",
+        "url": "https://aevera.xyz/",
+        "logo": "https://aevera.xyz/favicon-google.jpg",
+        "sameAs": [
+          "https://x.com/AEVERAxyz",
+          "https://github.com/0xgelassen"
+        ]
+      }
+    ]
     </script>
 
     <meta property="og:type" content="website" />

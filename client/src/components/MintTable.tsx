@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { useReadContract } from "wagmi";
 import { Loader2, ExternalLink, User, AlertCircle, Layers } from "lucide-react"; 
 import { cn } from "@/lib/utils";
-import { parseAbiItem, createPublicClient, http } from "viem"; // WICHTIG: createPublicClient importiert
+import { parseAbiItem, createPublicClient, http } from "viem"; 
 import AeveraVaultABI from "@/abis/AeveraVaultABI.json"; 
-import { APP_CONFIG } from "@/lib/config"; // Config importieren
+import { APP_CONFIG } from "@/lib/config"; 
 
 // --- TYPE EXPORTIEREN ---
 export interface MintEventData {
@@ -25,10 +25,10 @@ interface MintTableProps {
   onRowClick?: (nft: MintEventData) => void;
 }
 
-// --- KONFIGURATION (OPTIMIERT FÜR PUBLIC NODES) ---
-// Da wir jetzt den öffentlichen Node nutzen, können wir größere Chunks laden!
-const CHUNK_SIZE = 10000n; 
-const MAX_CHUNKS = 50;      
+// OPTIMIERUNG: 4000 ist sicher für Base Public Nodes.
+// BATCH_SIZE = 5 bedeutet: 5 Anfragen gleichzeitig (Parallelisierung).
+const CHUNK_SIZE = 4000n; 
+const BATCH_SIZE = 5;
 
 export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) {
   const [events, setEvents] = useState<MintEventData[]>([]);
@@ -37,9 +37,6 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
   const [error, setError] = useState<string | null>(null);
   const [totalMintedCount, setTotalMintedCount] = useState(0);
 
-  // WICHTIG: Wir nutzen nicht den globalen Provider (Alchemy), sondern einen eigenen
-  // basierend auf der PUBLIC_RPC_URL aus der Config.
-  // Das umgeht das "Rate Limit" Problem komplett.
   const publicClientRef = useRef(createPublicClient({
       chain: APP_CONFIG.ACTIVE_CHAIN,
       transport: http(APP_CONFIG.PUBLIC_RPC_URL)
@@ -47,12 +44,12 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
   const isPollingRef = useRef(false);
 
-  // Design-System
+  // Design-System (Unverändert)
   const highlightColor = isPrivate ? "text-purple-400" : "text-cyan-400";
   const badgeBg = isPrivate ? "bg-purple-500/10" : "bg-cyan-500/10";
   const badgeBorder = isPrivate ? "border-purple-500/20" : "border-cyan-500/20";
 
-  // ShortID direkt holen
+  // 1. Wir holen 'sealedAt' (Index 6)
   const { data: capsuleData } = useReadContract({
     address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
     abi: AeveraVaultABI,
@@ -60,95 +57,115 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
     args: [capsuleId],
   });
 
-  const shortId = capsuleData ? (capsuleData as any)[2] : "...";
+  const capsuleDataArray = capsuleData as any[] | undefined;
+  const shortId = capsuleDataArray ? capsuleDataArray[2] : "...";
+  // 'sealedAt' ist unser Anker für die Zeit und den Startblock
+  const sealedAt = capsuleDataArray ? Number(capsuleDataArray[6]) : 0;
 
-  // MAIN FETCH FUNCTION
+  // MAIN FETCH FUNCTION (Turbo-Modus: Parallel Batching)
   const fetchSmartHistory = async (isBackgroundUpdate = false) => {
       const client = publicClientRef.current;
-      if (!client || isPollingRef.current) return;
+      // WICHTIG: Wir warten, bis wir 'sealedAt' haben, sonst suchen wir blind
+      if (!client || isPollingRef.current || !sealedAt) return;
 
       isPollingRef.current = true; // Lock
 
       if (!isBackgroundUpdate) {
           setIsLoading(true);
           setError(null);
-          setStatusMsg("Reading Public Ledger...");
+          setStatusMsg("Initializing Turbo Sync...");
       }
 
       try {
         const filterId = BigInt(capsuleId);
         const currentBlock = await client.getBlockNumber();
 
-        let fromBlock = currentBlock - CHUNK_SIZE;
-        let toBlock = currentBlock;
-        let foundGenesis = false;
+        // 1. Startblock berechnen
+        const now = Math.floor(Date.now() / 1000);
+        const ageSeconds = now - sealedAt;
+        const estimatedBlockDiff = BigInt(Math.floor(ageSeconds / 2)) + 1000n; // Puffer
+
+        let startBlock = currentBlock - estimatedBlockDiff;
+        if (startBlock < 0n) startBlock = 0n;
+
+        // 2. Alle benötigten Bereiche (Ranges) im Voraus berechnen
+        const ranges = [];
+        let cursor = startBlock;
+        while (cursor <= currentBlock) {
+            let end = cursor + CHUNK_SIZE;
+            if (end > currentBlock) end = currentBlock;
+            ranges.push({ from: cursor, to: end });
+            cursor = end + 1n;
+        }
+
+        if (!isBackgroundUpdate) setStatusMsg(`Syncing ${ranges.length} segments...`);
+
         let allLogs: any[] = [];
-        let chunkCount = 0;
 
-        // --- BACKWARDS LOOP (Schnell & Stabil via Public Node) ---
-        while (!foundGenesis && chunkCount < MAX_CHUNKS && toBlock > 0n) {
-            if (fromBlock < 0n) fromBlock = 0n;
+        // 3. BATCH PROCESSING (Der Turbo)
+        for (let i = 0; i < ranges.length; i += BATCH_SIZE) {
+            const batch = ranges.slice(i, i + BATCH_SIZE);
 
-            const [genesisLogs, mintLogs] = await Promise.all([
-                client.getLogs({
-                    address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
-                    event: parseAbiItem('event CapsuleCreated(uint256 indexed id, string uuid, string shortId, address indexed author)'),
-                    args: { id: filterId }, 
-                    fromBlock: fromBlock,
-                    toBlock: toBlock
-                }),
-                client.getLogs({
-                    address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
-                    event: parseAbiItem('event CapsuleMinted(uint256 indexed id, address indexed minter, uint256 amount)'),
-                    args: { id: filterId },
-                    fromBlock: fromBlock,
-                    toBlock: toBlock
+            const batchResults = await Promise.all(
+                batch.map(async (range) => {
+                    return Promise.all([
+                        client.getLogs({
+                            address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
+                            event: parseAbiItem('event CapsuleCreated(uint256 indexed id, string uuid, string shortId, address indexed author)'),
+                            args: { id: filterId }, 
+                            fromBlock: range.from,
+                            toBlock: range.to
+                        }),
+                        client.getLogs({
+                            address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
+                            event: parseAbiItem('event CapsuleMinted(uint256 indexed id, address indexed minter, uint256 amount)'),
+                            args: { id: filterId },
+                            fromBlock: range.from,
+                            toBlock: range.to
+                        })
+                    ]);
                 })
-            ]);
+            );
 
-            const chunkEvents = [
-                ...genesisLogs.map(l => ({ ...l, _type: "GENESIS" })), 
-                ...mintLogs.map(l => ({ ...l, _type: "COPY" }))
-            ];
-
-            allLogs.push(...chunkEvents);
-
-            if (genesisLogs.length > 0) {
-                foundGenesis = true; 
+            for (const [genesisLogs, mintLogs] of batchResults) {
+                allLogs.push(
+                    ...genesisLogs.map(l => ({ ...l, _type: "GENESIS" })), 
+                    ...mintLogs.map(l => ({ ...l, _type: "COPY" }))
+                );
             }
 
-            toBlock = fromBlock - 1n;
-            fromBlock = toBlock - CHUNK_SIZE;
-            chunkCount++;
+            if (!isBackgroundUpdate && ranges.length > 10) {
+                 setStatusMsg(`Syncing... ${(Math.min((i + BATCH_SIZE) / ranges.length * 100, 100)).toFixed(0)}%`);
+            }
         }
 
         // --- DATEN VERARBEITEN ---
-        if(!isBackgroundUpdate) setStatusMsg("Sorting Events...");
+        const genesisEvent = allLogs.find(l => l._type === "GENESIS");
+        const genesisBlockNumber = genesisEvent ? genesisEvent.blockNumber : startBlock;
 
-        const rawEvents = await Promise.all(allLogs.map(async (log: any) => {
-            let timestamp = 0n;
-            try {
-                // Public Nodes sind oft schnell genug für direkte Block-Abfragen
-                const block = await client.getBlock({ blockNumber: log.blockNumber });
-                timestamp = block.timestamp;
-            } catch (e) {
-                // Fallback, falls Block-Time fehlschlägt
-            }
+        const rawEvents = allLogs.map((log: any) => {
+            // FIX: Wir stellen sicher, dass alle Operatoren BigInt sind
+            const blockNum = BigInt(log.blockNumber);
+            const genBlockNum = BigInt(genesisBlockNumber);
+            const blockDiff = blockNum - genBlockNum;
+
+            // FIX: Zeile 153 - Explizites BigInt Casting für die Berechnung
+            const estimatedTimestamp = BigInt(sealedAt) + (blockDiff * 2n);
 
             const amount = log._type === "GENESIS" ? 1 : Number(log.args.amount || 1);
 
             return {
                 txHash: log.transactionHash,
                 minter: log._type === "GENESIS" ? log.args.author : log.args.minter,
-                timestamp: timestamp,
+                timestamp: estimatedTimestamp,
                 type: log._type as "GENESIS" | "COPY",
                 amount: amount,
                 blockNumber: log.blockNumber,
                 logIndex: log.logIndex,
             };
-        }));
+        });
 
-        // Sortieren: Älteste zuerst für die Berechnung, dann umdrehen
+        // Sortieren
         rawEvents.sort((a, b) => {
             if (a.blockNumber < b.blockNumber) return -1;
             if (a.blockNumber > b.blockNumber) return 1;
@@ -171,13 +188,13 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
         });
 
         setTotalMintedCount(runningCounter);
-        setEvents(calculatedEvents.reverse()); // Neueste oben
+        setEvents(calculatedEvents.reverse()); 
         if(error) setError(null);
 
       } catch (err: any) {
         console.error("Fetch Error:", err);
         if(!isBackgroundUpdate) {
-             setError("Could not load history from public node.");
+             setError("Network busy. Retrying...");
         }
       } finally {
         setIsLoading(false);
@@ -187,12 +204,11 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
   useEffect(() => {
     fetchSmartHistory(); 
-    // Entspanntes Polling alle 10 Sekunden
     const interval = setInterval(() => {
         if (!isPollingRef.current) fetchSmartHistory(true); 
     }, 10000);
     return () => clearInterval(interval);
-  }, [capsuleId]); // Re-run wenn ID sich ändert
+  }, [capsuleId, sealedAt]); 
 
   const formatDate = (timestamp: bigint) => {
     if (!timestamp) return "-";
