@@ -5,18 +5,33 @@ const isTestnet =
   typeof window !== "undefined" && 
   (window.location.hostname.includes("testnet") || 
    window.location.hostname.includes("dev") || 
-   window.location.hostname.includes("replit"));
+   window.location.hostname.includes("replit") ||
+   window.location.hostname.includes("localhost"));
 
 // --- SECRET EXTRACTION ---
-// Wir holen nur den Schlüssel aus dem Tresor.
-// Der Code baut die Links dann unten selbst zusammen.
 const ALCHEMY_KEY = import.meta.env.VITE_ALCHEMY_API_KEY || "";
+
+// --- RPC LISTEN (DAS TELEFONBUCH) ---
+// Hier definieren wir die Ausweich-Server zentral
+const MAINNET_RPCS = [
+  "https://mainnet.base.org",
+  "https://base.llamarpc.com",
+  "https://base-mainnet.public.blastapi.io", 
+  "https://1rpc.io/base",
+  "https://base.meowrpc.com"
+];
+
+const SEPOLIA_RPCS = [
+  "https://sepolia.base.org",
+  "https://base-sepolia-rpc.publicnode.com",
+  "https://base-sepolia.blockpi.network/v1/rpc/public"
+];
 
 // --- KONFIGURATION (Das Gehirn) ---
 export const APP_CONFIG = {
   IS_TESTNET: isTestnet,
 
-  // Bestimmt das aktive Netzwerk für die Wallet-Verbindung
+  // Bestimmt das aktive Netzwerk
   ACTIVE_CHAIN: isTestnet ? baseSepolia : base,
 
   // Zentrale Contract-Steuerung
@@ -28,13 +43,16 @@ export const APP_CONFIG = {
 
   // --- TRANSPORT-LAYER ---
 
-  // 1. PUBLIC RPC (Kostenlos, keine Gefahr)
+  // 1. INTELLIGENTE RPC LISTE (NEU!)
+  // Die App muss nicht mehr raten. Sie nimmt einfach diese Liste.
+  RPC_LIST: isTestnet ? SEPOLIA_RPCS : MAINNET_RPCS,
+
+  // Legacy Feld (falls noch irgendwo einzeln gebraucht)
   PUBLIC_RPC_URL: isTestnet 
     ? "https://sepolia.base.org" 
     : "https://mainnet.base.org",
 
   // 2. WALLET TRANSPORT URL (Privat & Gesichert)
-  // Hier setzen wir den Schlüssel dynamisch ein.
   WALLET_TRANSPORT_URL: isTestnet
     ? `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_KEY}`
     : `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,

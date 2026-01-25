@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useReadContract } from "wagmi";
-import { Loader2, ExternalLink, User, AlertCircle, Layers } from "lucide-react"; 
+import { Loader2, ExternalLink, User, Layers, RefreshCw } from "lucide-react"; 
 import { cn } from "@/lib/utils";
-import { parseAbiItem, createPublicClient, http } from "viem"; 
+import { parseAbiItem, createPublicClient, http, fallback } from "viem"; 
 import AeveraVaultABI from "@/abis/AeveraVaultABI.json"; 
 import { APP_CONFIG } from "@/lib/config"; 
 
@@ -25,10 +25,10 @@ interface MintTableProps {
   onRowClick?: (nft: MintEventData) => void;
 }
 
-// OPTIMIERUNG FÜR VERCEL / PUBLIC RPC:
-// Wir reduzieren die Last, um "429 Too Many Requests" zu vermeiden.
-const CHUNK_SIZE = 2500n; // Kleiner (war 4000)
-const BATCH_SIZE = 3;     // Weniger gleichzeitig (war 5)
+// TUNING FÜR SPEED 🏎️
+// Wir vertrauen auf die Multi-RPC Rotation, daher sind wir aggressiver.
+const CHUNK_SIZE = 10000n; // Viel größere Happen (Testnet/Mainnet vertragen das oft)
+const BATCH_SIZE = 5;      // 5 Anfragen absolut gleichzeitig
 
 export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) {
   const [events, setEvents] = useState<MintEventData[]>([]);
@@ -37,22 +37,26 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
   const [error, setError] = useState<string | null>(null);
   const [totalMintedCount, setTotalMintedCount] = useState(0);
 
-  // Helper für künstliche Pause (Vercel Fix)
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
+  // Der Client holt sich die Liste direkt aus dem Gehirn (config.ts)
   const publicClientRef = useRef(createPublicClient({
       chain: APP_CONFIG.ACTIVE_CHAIN,
-      transport: http(APP_CONFIG.PUBLIC_RPC_URL)
+      transport: fallback(
+          APP_CONFIG.RPC_LIST.map(url => http(url, { 
+              batch: true, 
+              timeout: 6000 // Nur 6s warten, dann sofort nächsten Server probieren!
+          })),
+          { rank: true } 
+      )
   }));
 
   const isPollingRef = useRef(false);
+  const isMountedRef = useRef(true); 
 
-  // Design-System
+  // Design
   const highlightColor = isPrivate ? "text-purple-400" : "text-cyan-400";
   const badgeBg = isPrivate ? "bg-purple-500/10" : "bg-cyan-500/10";
   const badgeBorder = isPrivate ? "border-purple-500/20" : "border-cyan-500/20";
 
-  // 1. Wir holen 'sealedAt'
   const { data: capsuleData } = useReadContract({
     address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
     abi: AeveraVaultABI,
@@ -64,32 +68,33 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
   const shortId = capsuleDataArray ? capsuleDataArray[2] : "...";
   const sealedAt = capsuleDataArray ? Number(capsuleDataArray[6]) : 0;
 
-  // MAIN FETCH FUNCTION (Stabilisierter Modus)
+  // --- MAIN FETCH FUNCTION ---
   const fetchSmartHistory = async (isBackgroundUpdate = false) => {
       const client = publicClientRef.current;
       if (!client || isPollingRef.current || !sealedAt) return;
 
-      isPollingRef.current = true; // Lock
+      isPollingRef.current = true; 
 
       if (!isBackgroundUpdate) {
           setIsLoading(true);
           setError(null);
-          setStatusMsg("Connecting to Public Node...");
+          setStatusMsg("Connecting to Blockchain...");
       }
 
       try {
         const filterId = BigInt(capsuleId);
         const currentBlock = await client.getBlockNumber();
 
-        // 1. Startblock berechnen
+        // Startblock berechnen
         const now = Math.floor(Date.now() / 1000);
         const ageSeconds = now - sealedAt;
-        const estimatedBlockDiff = BigInt(Math.floor(ageSeconds / 2)) + 1000n;
+        // Kleinerer Puffer für mehr Speed, aber sicher genug (2000 Blöcke)
+        const estimatedBlockDiff = BigInt(Math.floor(ageSeconds / 2)) + 2000n; 
 
         let startBlock = currentBlock - estimatedBlockDiff;
         if (startBlock < 0n) startBlock = 0n;
 
-        // 2. Ranges berechnen
+        // Ranges erstellen
         const ranges = [];
         let cursor = startBlock;
         while (cursor <= currentBlock) {
@@ -103,43 +108,57 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
         let allLogs: any[] = [];
 
-        // 3. STABILISIERTES BATCH PROCESSING
+        // BATCH PROCESSING (OHNE DELAY)
+        // Wir feuern so schnell wie möglich.
         for (let i = 0; i < ranges.length; i += BATCH_SIZE) {
+            if (!isMountedRef.current) break;
+
             const batch = ranges.slice(i, i + BATCH_SIZE);
 
-            // Künstliche Pause VOR jedem Batch, um Rate Limits zu vermeiden
-            if (i > 0) await delay(300); 
+            // KEIN 'await delay()' mehr hier! Vollgas.
 
-            const batchResults = await Promise.all(
-                batch.map(async (range) => {
-                    return Promise.all([
-                        client.getLogs({
-                            address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
-                            event: parseAbiItem('event CapsuleCreated(uint256 indexed id, string uuid, string shortId, address indexed author)'),
-                            args: { id: filterId }, 
-                            fromBlock: range.from,
-                            toBlock: range.to
-                        }),
-                        client.getLogs({
-                            address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
-                            event: parseAbiItem('event CapsuleMinted(uint256 indexed id, address indexed minter, uint256 amount)'),
-                            args: { id: filterId },
-                            fromBlock: range.from,
-                            toBlock: range.to
-                        })
-                    ]);
-                })
-            );
-
-            for (const [genesisLogs, mintLogs] of batchResults) {
-                allLogs.push(
-                    ...genesisLogs.map(l => ({ ...l, _type: "GENESIS" })), 
-                    ...mintLogs.map(l => ({ ...l, _type: "COPY" }))
+            try {
+                const batchResults = await Promise.all(
+                    batch.map(async (range) => {
+                        return Promise.all([
+                            client.getLogs({
+                                address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
+                                event: parseAbiItem('event CapsuleCreated(uint256 indexed id, string uuid, string shortId, address indexed author)'),
+                                args: { id: filterId }, 
+                                fromBlock: range.from,
+                                toBlock: range.to
+                            }),
+                            client.getLogs({
+                                address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
+                                event: parseAbiItem('event CapsuleMinted(uint256 indexed id, address indexed minter, uint256 amount)'),
+                                args: { id: filterId },
+                                fromBlock: range.from,
+                                toBlock: range.to
+                            })
+                        ]);
+                    })
                 );
-            }
 
-            if (!isBackgroundUpdate && ranges.length > 5) {
-                 setStatusMsg(`Syncing... ${(Math.min((i + BATCH_SIZE) / ranges.length * 100, 100)).toFixed(0)}%`);
+                for (const [genesisLogs, mintLogs] of batchResults) {
+                    allLogs.push(
+                        ...genesisLogs.map(l => ({ ...l, _type: "GENESIS" })), 
+                        ...mintLogs.map(l => ({ ...l, _type: "COPY" }))
+                    );
+                }
+
+                // UI Update nur alle paar Batches, spart Render-Zeit
+                if (!isBackgroundUpdate && ranges.length > 10 && i % (BATCH_SIZE * 2) === 0) {
+                     const progress = Math.min((i + BATCH_SIZE) / ranges.length * 100, 100);
+                     setStatusMsg(`Syncing... ${progress.toFixed(0)}%`);
+                }
+
+            } catch (batchError) {
+                console.warn("Node busy, switching...", batchError);
+                // Wenn ein Node blockt, probieren wir es EINMAL mit kurzer Pause,
+                // ansonsten wirft 'viem' automatisch den nächsten Provider an.
+                await new Promise(r => setTimeout(r, 1000));
+                i -= BATCH_SIZE; 
+                continue;
             }
         }
 
@@ -152,9 +171,7 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
             const genBlockNum = BigInt(genesisBlockNumber);
             const blockDiff = blockNum - genBlockNum;
 
-            // Timestamp berechnen
             const estimatedTimestamp = BigInt(sealedAt) + (blockDiff * 2n);
-
             const amount = log._type === "GENESIS" ? 1 : Number(log.args.amount || 1);
 
             return {
@@ -168,7 +185,6 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
             };
         });
 
-        // Sortieren
         rawEvents.sort((a, b) => {
             if (a.blockNumber < b.blockNumber) return -1;
             if (a.blockNumber > b.blockNumber) return 1;
@@ -176,7 +192,6 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
         });
 
         let runningCounter = 0; 
-
         const calculatedEvents: MintEventData[] = rawEvents.map((event) => {
             const startSerial = runningCounter;
             const endSerial = runningCounter + event.amount - 1;
@@ -190,29 +205,37 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
             };
         });
 
-        setTotalMintedCount(runningCounter);
-        setEvents(calculatedEvents.reverse()); 
-        if(error) setError(null);
+        if (isMountedRef.current) {
+            setTotalMintedCount(runningCounter);
+            setEvents(calculatedEvents.reverse()); 
+            setError(null);
+        }
 
       } catch (err: any) {
         console.error("Fetch Error:", err);
-        // Bessere Fehlermeldung für den User
-        if(!isBackgroundUpdate) {
-             // Wenn wir schon Daten hatten, behalten wir sie bei Fehler lieber
-             if (events.length === 0) setError("Network busy (Public Node). Retrying...");
+        if (isMountedRef.current && !isBackgroundUpdate) {
+             if (events.length === 0) {
+                 setError("Searching Grid...");
+             }
         }
       } finally {
-        setIsLoading(false);
-        isPollingRef.current = false; // Unlock
+        if (isMountedRef.current) setIsLoading(false);
+        isPollingRef.current = false;
       }
   };
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchSmartHistory(); 
+
     const interval = setInterval(() => {
         if (!isPollingRef.current) fetchSmartHistory(true); 
-    }, 12000); // Polling etwas langsamer (12s) für Public Nodes
-    return () => clearInterval(interval);
+    }, 15000); 
+
+    return () => {
+        isMountedRef.current = false;
+        clearInterval(interval);
+    };
   }, [capsuleId, sealedAt]); 
 
   const formatDate = (timestamp: bigint) => {
@@ -261,8 +284,15 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
                             <tr>
                                 <td colSpan={6} className="py-12 text-center text-red-400">
                                     <div className="flex flex-col items-center gap-2">
-                                        <AlertCircle className="w-5 h-5" />
-                                        <span className="text-sm">{error}</span>
+                                        <RefreshCw className="w-5 h-5 mb-1" />
+                                        <span className="text-sm font-bold">Network Busy</span>
+                                        <span className="text-xs opacity-70">Auto-retrying...</span>
+                                        <button 
+                                            onClick={() => fetchSmartHistory(false)}
+                                            className="mt-2 px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs transition-colors"
+                                        >
+                                            Retry Now
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
