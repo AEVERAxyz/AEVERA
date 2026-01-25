@@ -25,10 +25,10 @@ interface MintTableProps {
   onRowClick?: (nft: MintEventData) => void;
 }
 
-// OPTIMIERUNG: 4000 ist sicher für Base Public Nodes.
-// BATCH_SIZE = 5 bedeutet: 5 Anfragen gleichzeitig (Parallelisierung).
-const CHUNK_SIZE = 4000n; 
-const BATCH_SIZE = 5;
+// OPTIMIERUNG FÜR VERCEL / PUBLIC RPC:
+// Wir reduzieren die Last, um "429 Too Many Requests" zu vermeiden.
+const CHUNK_SIZE = 2500n; // Kleiner (war 4000)
+const BATCH_SIZE = 3;     // Weniger gleichzeitig (war 5)
 
 export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) {
   const [events, setEvents] = useState<MintEventData[]>([]);
@@ -37,6 +37,9 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
   const [error, setError] = useState<string | null>(null);
   const [totalMintedCount, setTotalMintedCount] = useState(0);
 
+  // Helper für künstliche Pause (Vercel Fix)
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   const publicClientRef = useRef(createPublicClient({
       chain: APP_CONFIG.ACTIVE_CHAIN,
       transport: http(APP_CONFIG.PUBLIC_RPC_URL)
@@ -44,12 +47,12 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
   const isPollingRef = useRef(false);
 
-  // Design-System (Unverändert)
+  // Design-System
   const highlightColor = isPrivate ? "text-purple-400" : "text-cyan-400";
   const badgeBg = isPrivate ? "bg-purple-500/10" : "bg-cyan-500/10";
   const badgeBorder = isPrivate ? "border-purple-500/20" : "border-cyan-500/20";
 
-  // 1. Wir holen 'sealedAt' (Index 6)
+  // 1. Wir holen 'sealedAt'
   const { data: capsuleData } = useReadContract({
     address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
     abi: AeveraVaultABI,
@@ -59,13 +62,11 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
   const capsuleDataArray = capsuleData as any[] | undefined;
   const shortId = capsuleDataArray ? capsuleDataArray[2] : "...";
-  // 'sealedAt' ist unser Anker für die Zeit und den Startblock
   const sealedAt = capsuleDataArray ? Number(capsuleDataArray[6]) : 0;
 
-  // MAIN FETCH FUNCTION (Turbo-Modus: Parallel Batching)
+  // MAIN FETCH FUNCTION (Stabilisierter Modus)
   const fetchSmartHistory = async (isBackgroundUpdate = false) => {
       const client = publicClientRef.current;
-      // WICHTIG: Wir warten, bis wir 'sealedAt' haben, sonst suchen wir blind
       if (!client || isPollingRef.current || !sealedAt) return;
 
       isPollingRef.current = true; // Lock
@@ -73,7 +74,7 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
       if (!isBackgroundUpdate) {
           setIsLoading(true);
           setError(null);
-          setStatusMsg("Initializing Turbo Sync...");
+          setStatusMsg("Connecting to Public Node...");
       }
 
       try {
@@ -83,12 +84,12 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
         // 1. Startblock berechnen
         const now = Math.floor(Date.now() / 1000);
         const ageSeconds = now - sealedAt;
-        const estimatedBlockDiff = BigInt(Math.floor(ageSeconds / 2)) + 1000n; // Puffer
+        const estimatedBlockDiff = BigInt(Math.floor(ageSeconds / 2)) + 1000n;
 
         let startBlock = currentBlock - estimatedBlockDiff;
         if (startBlock < 0n) startBlock = 0n;
 
-        // 2. Alle benötigten Bereiche (Ranges) im Voraus berechnen
+        // 2. Ranges berechnen
         const ranges = [];
         let cursor = startBlock;
         while (cursor <= currentBlock) {
@@ -98,13 +99,16 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
             cursor = end + 1n;
         }
 
-        if (!isBackgroundUpdate) setStatusMsg(`Syncing ${ranges.length} segments...`);
+        if (!isBackgroundUpdate) setStatusMsg(`Scanning Ledger...`);
 
         let allLogs: any[] = [];
 
-        // 3. BATCH PROCESSING (Der Turbo)
+        // 3. STABILISIERTES BATCH PROCESSING
         for (let i = 0; i < ranges.length; i += BATCH_SIZE) {
             const batch = ranges.slice(i, i + BATCH_SIZE);
+
+            // Künstliche Pause VOR jedem Batch, um Rate Limits zu vermeiden
+            if (i > 0) await delay(300); 
 
             const batchResults = await Promise.all(
                 batch.map(async (range) => {
@@ -134,7 +138,7 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
                 );
             }
 
-            if (!isBackgroundUpdate && ranges.length > 10) {
+            if (!isBackgroundUpdate && ranges.length > 5) {
                  setStatusMsg(`Syncing... ${(Math.min((i + BATCH_SIZE) / ranges.length * 100, 100)).toFixed(0)}%`);
             }
         }
@@ -144,12 +148,11 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
         const genesisBlockNumber = genesisEvent ? genesisEvent.blockNumber : startBlock;
 
         const rawEvents = allLogs.map((log: any) => {
-            // FIX: Wir stellen sicher, dass alle Operatoren BigInt sind
             const blockNum = BigInt(log.blockNumber);
             const genBlockNum = BigInt(genesisBlockNumber);
             const blockDiff = blockNum - genBlockNum;
 
-            // FIX: Zeile 153 - Explizites BigInt Casting für die Berechnung
+            // Timestamp berechnen
             const estimatedTimestamp = BigInt(sealedAt) + (blockDiff * 2n);
 
             const amount = log._type === "GENESIS" ? 1 : Number(log.args.amount || 1);
@@ -193,8 +196,10 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
       } catch (err: any) {
         console.error("Fetch Error:", err);
+        // Bessere Fehlermeldung für den User
         if(!isBackgroundUpdate) {
-             setError("Network busy. Retrying...");
+             // Wenn wir schon Daten hatten, behalten wir sie bei Fehler lieber
+             if (events.length === 0) setError("Network busy (Public Node). Retrying...");
         }
       } finally {
         setIsLoading(false);
@@ -206,7 +211,7 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
     fetchSmartHistory(); 
     const interval = setInterval(() => {
         if (!isPollingRef.current) fetchSmartHistory(true); 
-    }, 10000);
+    }, 12000); // Polling etwas langsamer (12s) für Public Nodes
     return () => clearInterval(interval);
   }, [capsuleId, sealedAt]); 
 
