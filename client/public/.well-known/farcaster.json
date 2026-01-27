@@ -10,13 +10,16 @@
     "iconUrl": "https://aevera.xyz/aevera_logo_square.jpg",
     "homeUrl": "https://aevera.xyz",
     "imageUrl": "https://aevera.xyz/aevera_promo_banner.jpg",
-    "buttonTitle": "Seal Capsule",
+    "buttonTitle": "Seal for the Beyond",
     "splashImageUrl": "https://aevera.xyz/aevera_promo_banner.jpg",
     "splashBackgroundColor": "#020617",
     "webhookUrl": "https://api.neynar.com/f/app/7a50be59-617f-4f4d-9e77-31ed033df61d/event"
   },
+  "name": "AEVERA",
+  "iconUrl": "https://aevera.xyz/aevera_logo_square.jpg",
+  "homeUrl": "https://aevera.xyz",
   "primaryCategory": "social",
-  "description": "The protocol for eternal messages. Encrypt data for the future using Identity-Based Encryption.",
+  "description": "AEVERA allows you to encrypt messages & assets that can only be revealed when the time is right.",
   "screenshotUrls": [
     "https://aevera.xyz/screenshot_mobile_1.jpg",
     "https://aevera.xyz/screenshot_mobile_2.jpg",
