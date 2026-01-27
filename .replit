@@ -39,4 +39,4 @@ waitForPort = 5000
 [userenv]
 
 [userenv.shared]
-VITE_NEYNAR_CLIENT_ID = "4e8fc6b3-c3fe-49e6-b1bd-a5b5f3e7d593"
+VITE_NEYNAR_CLIENT_ID = "7a50be59-617f-4f4d-9e77-31ed033df61d"

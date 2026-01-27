@@ -416,11 +416,11 @@ export default function Home() {
                         : "Password Protected & Time-Locked. Double Layer Security. Absolute Privacy."}
                     </p>
                     <div className="mt-3 text-[10px] font-mono opacity-80 border-t border-white/10 pt-2 uppercase tracking-wide flex flex-wrap gap-2 text-slate-400">
-                    <span className="text-white">Capsule sealing is free</span>
+                    <span className="text-white">Sealing is Minting (0.000777 ETH)</span>
                     <span>|</span>
-                    <span>{mode === 'public' ? "Anyone can mint" : "Author-only mint"}</span>
+                    <span>{mode === 'public' ? "Anyone can mint copies of it" : "Only you can mint copies of it"}</span>
                     <span>|</span>
-                    <span>100% On-Chain Storage</span>
+                    <span>{mode === 'public' ? "Supply 100" : "Supply 1000"}</span>
                     </div>
                 </div>
 
@@ -537,7 +537,7 @@ export default function Home() {
                     {isGenerating ? <><Loader2 className="animate-spin mr-2"/> {statusText}</> :
                         isPending ? <><Loader2 className="animate-spin mr-2"/> Confirm in Wallet...</> :
                         isConfirming ? <><Loader2 className="animate-spin mr-2"/> Sealing on Base...</> :
-                        <><Upload className="mr-2 w-5 h-5"/> Seal for the Beyond</>}
+                        <>Seal for the Beyond (0.000777 ETH)</>}
                     </Button>
                 )}
                 </CardFooter>
