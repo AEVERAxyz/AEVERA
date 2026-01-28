@@ -16,12 +16,18 @@
     "webhookUrl": "https://api.neynar.com/f/app/7a50be59-617f-4f4d-9e77-31ed033df61d/event"
   },
   "name": "AEVERA",
+  "version": "1",
   "iconUrl": "https://aevera.xyz/aevera_logo_square.jpg",
   "homeUrl": "https://aevera.xyz",
   "primaryCategory": "social",
-  "tags": ["social", "utility"],
+  "tags": [
+    "social",
+    "utility"
+  ],
+  "subtitle": "Secure Time Capsules",
   "description": "In a world of vanishing moments, AEVERA is your anchor in time. A decentralized protocol for eternal messages, secured by mathematics and stored on Base.",
   "heroImageUrl": "https://aevera.xyz/aevera_promo_banner.jpg",
+  "tagline": "Write to the future",
   "splashImageUrl": "https://aevera.xyz/aevera_promo_banner.jpg",
   "splashBackgroundColor": "#020617",
   "screenshotUrls": [
