@@ -24,9 +24,10 @@
       "https://aevera.xyz/screenshot_mobile_2.jpg",
       "https://aevera.xyz/screenshot_mobile_3.jpg"
     ],
-    "ogTitle": "AEVERA | Beyond Time",
+    "ogTitle": "AEVERA Beyond Time",
     "ogDescription": "The Anchor in Time. Encrypt messages for the future.",
-    "ogImageUrl": "https://aevera.xyz/aevera_promo_banner.jpg"
+    "ogImageUrl": "https://aevera.xyz/aevera_promo_banner.jpg",
+    "noindex": false
   },
   "frame": {
     "version": "1",
