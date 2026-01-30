@@ -50,7 +50,7 @@ function formatToStrictUTC(ts: number): string {
 }
 
 // ------------------------------------------------------------------
-// 1. NFT PREVIEW MODAL
+// 1. NFT PREVIEW MODAL (FORCED HORIZONTAL LAYOUT)
 // ------------------------------------------------------------------
 function NFTDetailModal({ nft, capsule, isOpen, onClose }: { nft: MintEventData | null, capsule: any, isOpen: boolean, onClose: () => void }) {
     const [metadata, setMetadata] = useState<{ image: string, name: string, description: string, attributes: any[] } | null>(null);
@@ -125,72 +125,88 @@ function NFTDetailModal({ nft, capsule, isOpen, onClose }: { nft: MintEventData 
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
-            <div className="bg-[#0A0F1E] border border-white/10 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                {/* LEFT: IMAGE PREVIEW */}
-                <div className="w-full md:w-1/2 bg-black flex items-center justify-center p-8 border-b md:border-b-0 md:border-r border-white/10 relative overflow-hidden">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] bg-blue-500/5 blur-3xl rounded-full pointer-events-none"></div>
-                    <div className="aspect-square w-full max-w-[400px] shadow-[0_0_30px_rgba(0,0,0,0.5)] flex items-center justify-center bg-[#020617] rounded-lg overflow-hidden relative">
-                        {loading ? (
-                            <div className="flex flex-col items-center gap-3 text-slate-500 animate-pulse">
-                                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                                <span className="text-xs font-mono uppercase tracking-widest">FETCHING FROM CHAIN...</span>
+            {/* FIX: 'flex-col' ENTFERNT. Nur noch ein Container-Rahmen.
+               max-h-[85vh]: Damit es auf dem Handy nicht über den Bildschirmrand hinausgeht.
+            */}
+            <div className="bg-[#0A0F1E] border border-white/10 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden block max-h-[85vh]" onClick={e => e.stopPropagation()}>
+
+                {/* SCROLL ZONE: Erlaubt horizontales Wischen */}
+                <div className="w-full overflow-x-auto custom-scrollbar">
+
+                    {/* HARDCORE FIX: style={{ display: 'flex', ... }}
+                       Dies überschreibt alle Tailwind-Klassen und zwingt das Layout horizontal (row) zu sein.
+                       minWidth: '800px' garantiert, dass es breit genug für Bild+Text nebeneinander ist.
+                    */}
+                    <div className="h-[500px]" style={{ display: 'flex', flexDirection: 'row', minWidth: '800px' }}>
+
+                        {/* LEFT: IMAGE (50% Breite) */}
+                        <div className="w-1/2 bg-black flex items-center justify-center p-8 border-r border-white/10 relative overflow-hidden shrink-0 h-full">
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] bg-blue-500/5 blur-3xl rounded-full pointer-events-none"></div>
+                            <div className="aspect-square w-full max-w-[350px] shadow-[0_0_30px_rgba(0,0,0,0.5)] flex items-center justify-center bg-[#020617] rounded-lg overflow-hidden relative">
+                                {loading ? (
+                                    <div className="flex flex-col items-center gap-3 text-slate-500 animate-pulse">
+                                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                                        <span className="text-xs font-mono uppercase tracking-widest">FETCHING FROM CHAIN...</span>
+                                    </div>
+                                ) : error ? (
+                                    <div className="flex flex-col items-center gap-2 text-red-400 p-4 text-center">
+                                        <AlertTriangle className="w-8 h-8 opacity-80" />
+                                        <span className="text-xs font-mono uppercase tracking-widest">FAILED TO LOAD</span>
+                                    </div>
+                                ) : metadata ? (
+                                    <img src={metadata.image} alt="Artifact" className="w-full h-full object-contain" />
+                                ) : (
+                                    <span className="text-xs text-slate-600">No Data</span>
+                                )}
                             </div>
-                        ) : error ? (
-                            <div className="flex flex-col items-center gap-2 text-red-400 p-4 text-center">
-                                <AlertTriangle className="w-8 h-8 opacity-80" />
-                                <span className="text-xs font-mono uppercase tracking-widest">FAILED TO LOAD</span>
-                            </div>
-                        ) : metadata ? (
-                            <img src={metadata.image} alt="Artifact" className="w-full h-full object-contain" />
-                        ) : (
-                            <span className="text-xs text-slate-600">No Data</span>
-                        )}
-                    </div>
-                </div>
-                {/* RIGHT: DETAILS */}
-                <div className="w-full md:w-1/2 flex flex-col bg-[#0A0F1E]">
-                    <div className="flex items-center justify-between p-6 border-b border-white/5">
-                        <div>
-                            <h3 className="text-xl font-bold text-white font-display">{nft.type === 'GENESIS' ? 'Genesis Artifact' : `Standard Edition`}</h3>
-                            <p className="text-sm text-slate-400">{capsule.isPrivate ? 'Private Vault Lineage' : 'Public Broadcast Lineage'}</p>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-white/10 text-slate-400 hover:text-white rounded-full"><X className="w-5 h-5" /></Button>
-                    </div>
-                    <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-                        <div className="space-y-2">
-                            <label className="text-xs text-slate-500 uppercase tracking-widest font-bold">Current Collector</label>
-                            <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center border border-white/10"><User className="w-4 h-4 text-slate-400" /></div>
-                                <div className="overflow-hidden">
-                                    <p className="text-sm text-white font-mono truncate w-full">{nft.minter}</p>
-                                    {nft.type === 'GENESIS' && <span className="text-[10px] text-cyan-400 bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-500/20 mt-1 inline-block">ORIGINAL AUTHOR</span>}
+
+                        {/* RIGHT: DETAILS (50% Breite) */}
+                        <div className="w-1/2 flex flex-col bg-[#0A0F1E] shrink-0 h-full">
+                            <div className="flex items-center justify-between p-6 border-b border-white/5">
+                                <div>
+                                    <h3 className="text-xl font-bold text-white font-display">{nft.type === 'GENESIS' ? 'Genesis Artifact' : `Standard Edition`}</h3>
+                                    <p className="text-sm text-slate-400">{capsule.isPrivate ? 'Private Vault Lineage' : 'Public Broadcast Lineage'}</p>
+                                </div>
+                                <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-white/10 text-slate-400 hover:text-white rounded-full"><X className="w-5 h-5" /></Button>
+                            </div>
+                            <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
+                                <div className="space-y-2">
+                                    <label className="text-xs text-slate-500 uppercase tracking-widest font-bold">Current Collector</label>
+                                    <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg">
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center border border-white/10"><User className="w-4 h-4 text-slate-400" /></div>
+                                        <div className="overflow-hidden">
+                                            <p className="text-sm text-white font-mono truncate w-full">{nft.minter}</p>
+                                            {nft.type === 'GENESIS' && <span className="text-[10px] text-cyan-400 bg-cyan-950/30 px-1.5 py-0.5 rounded border border-cyan-500/20 mt-1 inline-block">ORIGINAL AUTHOR</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2 text-slate-400"><Hash className="w-3 h-3" /><span className="text-[10px] uppercase tracking-wider">ID</span></div>
+                                        <p className="text-lg font-mono text-white font-bold">#{capsule.shortId}</p>
+                                    </div>
+                                    <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2 text-slate-400"><Calendar className="w-3 h-3" /><span className="text-[10px] uppercase tracking-wider">Minted</span></div>
+                                        <p className="text-sm text-white font-mono">{formattedDate}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs text-slate-500 uppercase tracking-widest font-bold">About this Artifact</label>
+                                    {metadata ? (
+                                        <div className="text-sm text-slate-400 leading-relaxed border-l-2 border-white/10 pl-3">
+                                            <p className="mb-2 italic text-slate-300">"{metadata.description}"</p>
+                                        </div>
+                                    ) : <p className="text-sm text-slate-600 italic">Description unavailable.</p>}
                                 </div>
                             </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                                <div className="flex items-center gap-2 mb-2 text-slate-400"><Hash className="w-3 h-3" /><span className="text-[10px] uppercase tracking-wider">ID</span></div>
-                                <p className="text-lg font-mono text-white font-bold">#{capsule.shortId}</p>
-                            </div>
-                            <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                                <div className="flex items-center gap-2 mb-2 text-slate-400"><Calendar className="w-3 h-3" /><span className="text-[10px] uppercase tracking-wider">Minted</span></div>
-                                <p className="text-sm text-white font-mono">{formattedDate}</p>
+                            <div className="p-6 border-t border-white/5 bg-[#050A15]">
+                                {/* UPDATE: Dynamic Explorer Link from Config */}
+                                <a href={`${APP_CONFIG.EXPLORER_URL}/tx/${nft.txHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black hover:bg-slate-200 font-bold rounded-lg transition-colors text-sm uppercase tracking-wide">
+                                    VIEW ON BLOCKCHAIN <ExternalLink className="w-4 h-4 ml-2" />
+                                </a>
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-xs text-slate-500 uppercase tracking-widest font-bold">About this Artifact</label>
-                            {metadata ? (
-                                <div className="text-sm text-slate-400 leading-relaxed border-l-2 border-white/10 pl-3">
-                                    <p className="mb-2 italic text-slate-300">"{metadata.description}"</p>
-                                </div>
-                            ) : <p className="text-sm text-slate-600 italic">Description unavailable.</p>}
-                        </div>
-                    </div>
-                    <div className="p-6 border-t border-white/5 bg-[#050A15]">
-                        {/* UPDATE: Dynamic Explorer Link from Config */}
-                        <a href={`${APP_CONFIG.EXPLORER_URL}/tx/${nft.txHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black hover:bg-slate-200 font-bold rounded-lg transition-colors text-sm uppercase tracking-wide">
-                            VIEW ON BLOCKCHAIN <ExternalLink className="w-4 h-4 ml-2" />
-                        </a>
                     </div>
                 </div>
             </div>
@@ -858,7 +874,8 @@ Mint yours here:`;
                       </div>
 
                       {/* Controls Row */}
-                      <div className="p-4 flex items-center gap-4">
+                      {/* ÄNDERUNG: p-2 md:p-4 und gap-2 md:gap-4. Gibt dem Button mehr Platz auf Handy. */}
+                      <div className="p-2 md:p-4 flex items-center gap-2 md:gap-4">
                         {/* Counter */}
                         <div className="flex items-center bg-black/40 border border-white/10 rounded-lg h-12">
                             <button 
@@ -887,7 +904,8 @@ Mint yours here:`;
                         : <Button 
                             onClick={handleMint} 
                             disabled={isSoldOut || isWritePending || isConfirming || !canMint} 
-                            className={`flex-1 text-white font-bold h-12 rounded-xl ${capsule.isPrivate ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'} disabled:opacity-50`}
+                            // ÄNDERUNG: text-sm md:text-lg hinzugefügt.
+                            className={`flex-1 text-sm md:text-lg text-white font-bold h-12 rounded-xl ${capsule.isPrivate ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'} disabled:opacity-50`}
                           >
                             {isConfirming ? <Loader2 className="animate-spin h-5 w-5 mx-auto" /> 
                              : isSoldOut ? "SOLD OUT" 

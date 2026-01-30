@@ -319,7 +319,7 @@ export default function Home() {
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#1652F0]/10 rounded-full blur-[120px]" />
       </div>
 
-      <div className="absolute top-6 right-6 z-50">
+      <div className="w-full max-w-5xl flex justify-end mb-4 relative z-50">
          <CustomConnectButton />
       </div>
 
@@ -351,21 +351,22 @@ export default function Home() {
                         Your message has been encrypted and anchored on the Base blockchain. It is now beyond time.
                     </p>
 
-                    <div className="flex flex-col w-full max-w-sm gap-3">
-                        <div className="flex gap-2 w-full">
+                    {/* FIX: LAYOUT 1:1 AN CAPSULE.TSX ANGEPASST */}
+                    <div className="flex flex-col w-full max-w-md gap-4">
+                        <div className="flex gap-3 w-full">
                             <Button
                                 onClick={() => window.location.href = `/capsule/${successData.shortId}`}
-                                className={`flex-1 h-14 text-base md:text-lg font-bold bg-gradient-to-r ${mode === 'private' ? 'from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/20' : 'from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/20'} text-white rounded-xl shadow-lg transition-all hover:scale-[1.02]`}
+                                className={`flex-1 h-12 font-bold bg-gradient-to-r ${mode === 'private' ? 'from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/20' : 'from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/20'} text-white rounded-xl shadow-lg transition-all hover:scale-[1.02]`}
                             >
-                                Open Capsule Page <ArrowRight className="ml-2 w-5 h-5" />
+                                VIEW CAPSULE <ArrowRight size={16} className="ml-2" />
                             </Button>
 
                             <Button 
                                 onClick={() => window.open(`${APP_CONFIG.EXPLORER_URL}/tx/${successData.txHash}`, '_blank')} 
-                                className="flex-1 h-14 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold transition-all"
+                                className="flex-1 h-12 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold transition-all"
                                 title="View Transaction Proof"
                             >
-                                PROOF <ExternalLink size={18} className="ml-2"/>
+                                PROOF <ExternalLink size={16} className="ml-2"/>
                             </Button>
                         </div>
 
@@ -521,7 +522,6 @@ export default function Home() {
                     Connect Wallet to Seal
                     </Button>
                 ) : chain?.id !== APP_CONFIG.ACTIVE_CHAIN.id ? (
-                    // NEU: Netzwerk-Check hinzugefügt
                     <Button 
                         onClick={() => switchChain({ chainId: APP_CONFIG.ACTIVE_CHAIN.id })} 
                         className="flex-1 h-14 text-lg font-bold bg-orange-500 hover:bg-orange-600 text-white rounded-xl transition-all shadow-lg shadow-orange-500/20"
@@ -532,7 +532,9 @@ export default function Home() {
                     <Button
                     onClick={handleSeal}
                     disabled={isGenerating || isPending || isConfirming || !message || !sealerName || !selectedDate || message.length > 7777}
-                    className={`flex-1 h-14 text-lg font-bold rounded-xl transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:hover:scale-100 ${mode === 'public' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/20' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/20'}`}
+                    // FIX: PUNKT 2 - Button-Text responsiv gemacht (text-sm md:text-lg)
+                    // damit "Seal for the Beyond (0.000777 ETH)" auf dem Handy nicht abgeschnitten wird.
+                    className={`flex-1 h-14 w-full text-sm md:text-lg font-bold rounded-xl transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:hover:scale-100 ${mode === 'public' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/20' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/20'}`}
                     >
                     {isGenerating ? <><Loader2 className="animate-spin mr-2"/> {statusText}</> :
                         isPending ? <><Loader2 className="animate-spin mr-2"/> Confirm in Wallet...</> :
@@ -547,7 +549,6 @@ export default function Home() {
       </main>
 
       <div className="w-full mt-16 -mb-20">
-        {/* FIX: key sorgt dafür, dass die Tabelle neu geladen wird */}
         <ArchiveTable key={archiveRefreshTrigger} />
       </div>
 
