@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi'; 
 import { useConnectModal } from '@rainbow-me/rainbowkit';
-import { Loader2, Globe, Lock, Eye, EyeOff, AlertTriangle, Upload, UserCircle2, Calendar, ArrowRight, CheckCircle, ShieldCheck, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Loader2, Globe, Lock, Eye, EyeOff, AlertTriangle, Upload, UserCircle2, Calendar, ArrowRight, CheckCircle, ShieldCheck, Link as LinkIcon, ExternalLink, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,12 +24,12 @@ import { SiFarcaster, SiX } from "react-icons/si";
 // --- DRAND TIMELOCK LIBRARY ---
 import { timelockEncrypt, roundAt } from "tlock-js";
 
-// --- NEUER ABI IMPORT ---
-import AeveraVaultABI from "../abis/AeveraVaultABI.json";
+// --- ABI IMPORTS ---
+import AeveraGatewayABI from "../abis/AeveraGateway.json";
 
 // --- CONFIG & UTILS IMPORTIEREN ---
 import { APP_CONFIG } from "../lib/config";
-import { getVerifiedBaseName, getVerifiedEnsName } from "../lib/utils";
+import { getVerifiedBaseName, getVerifiedEnsName, GATEWAY_ADDRESS } from "../lib/utils";
 
 // --- DRAND CONFIGURATION ---
 const CHAIN_HASH = "52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971";
@@ -72,7 +72,7 @@ export default function Home() {
   const { openConnectModal } = useConnectModal();
   const { switchChain } = useSwitchChain(); 
 
-  // --- IDENTITY RESOLVER (Hybrid: Alchemy via Utils) ---
+  // --- IDENTITY RESOLVER ---
   useEffect(() => {
     async function fetchIdentities() {
       if (!address) {
@@ -80,21 +80,15 @@ export default function Home() {
         setResolvedEnsName(null);
         return;
       }
-
-      console.log("🔍 Starting Identity Lookup via Alchemy Telescope...");
       try {
-        // Parallel abrufen
         const [baseName, ensName] = await Promise.all([
             getVerifiedBaseName(address),
             getVerifiedEnsName(address)
         ]);
-
-        console.log("✅ Identity Lookup Finished:", { baseName, ensName });
-
         if (baseName) setResolvedBaseName(baseName);
         if (ensName) setResolvedEnsName(ensName);
       } catch (e) {
-        console.error("❌ Identity Fetch Error:", e);
+        console.error("Identity Fetch Error:", e);
       }
     }
     fetchIdentities();
@@ -111,33 +105,28 @@ export default function Home() {
     return now.toISOString().slice(0, 16);
   };
 
-  // Dropdown Logic
   const getAvailableIdentities = () => {
     if (!address) return [];
     const options = [];
     const shortAddr = `${address.slice(0, 6)}...${address.slice(-4)}`;
 
     if (resolvedBaseName) {
-        options.push({ value: resolvedBaseName, label: `🔹 ${resolvedBaseName} (Base)` });
+        options.push({ value: resolvedBaseName, label: `🔵 ${resolvedBaseName} (Base)` });
     }
     if (resolvedEnsName && resolvedEnsName !== resolvedBaseName) {
-        options.push({ value: resolvedEnsName, label: `🔹 ${resolvedEnsName} (ENS)` });
+        options.push({ value: resolvedEnsName, label: `🌐 ${resolvedEnsName} (ENS)` });
     }
-    options.push({ value: shortAddr, label: `${shortAddr} (Wallet)` });
+    options.push({ value: shortAddr, label: `👤 ${shortAddr} (Wallet)` });
     return options;
   };
 
-  // Auto-Select Identity
   useEffect(() => {
     if (isConnected && address) {
         const shortAddr = `${address.slice(0, 6)}...${address.slice(-4)}`;
-        // WICHTIG: Hier prüfen wir, ob die Namen da sind
         if (resolvedBaseName) {
-            console.log("🎯 Auto-selecting Base Name:", resolvedBaseName);
             setSealerName(resolvedBaseName);
         }
         else if (resolvedEnsName) {
-            console.log("🎯 Auto-selecting ENS Name:", resolvedEnsName);
             setSealerName(resolvedEnsName);
         }
         else if (!sealerName) setSealerName(shortAddr);
@@ -151,7 +140,7 @@ export default function Home() {
     setCurrentShortId(generateShortId());
   }, []);
 
-  // --- SEAL HANDLER ---
+  // --- SEAL HANDLER (UPDATED WITH BACKEND SIGNATURE) ---
   const handleSeal = async () => {
     if (!message || !selectedDate) {
       toast({ title: "Incomplete", description: "Please fill out message and date.", variant: "destructive" });
@@ -206,22 +195,57 @@ export default function Home() {
         safeClient as any
       );
 
+      // --- NEU: VERIFY IDENTITY & SIGN (Backend Call) ---
+      setStatusText("Verifying Identity...");
+
+      let signature = "0x"; 
+
+      try {
+        const signResponse = await fetch('/api/sign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                userAddress: address, 
+                authorName: finalAuthor 
+            })
+        });
+
+        if (!signResponse.ok) {
+            throw new Error("Identity Verification failed");
+        }
+
+        const signData = await signResponse.json();
+        signature = signData.signature;
+
+      } catch (signError) {
+          console.error("Signature Error:", signError);
+          toast({ title: "Verification Failed", description: "Could not verify identity.", variant: "destructive" });
+          setIsGenerating(false);
+          return; // STOP HERE
+      }
+      // --------------------------------------------------
+
       setStatusText("Anchoring to Blockchain...");
 
       const unlockTimestamp = Math.floor(selectedDate.getTime() / 1000);
       const isPrivateBool = mode === "private";
 
       writeContract({
-        address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
-        abi: AeveraVaultABI,
-        functionName: 'createCapsule',
+        address: GATEWAY_ADDRESS as `0x${string}`,
+        abi: AeveraGatewayABI,
+        functionName: 'engrave',
         args: [
-            currentUuid,
-            currentShortId,
-            finalAuthor,
-            BigInt(Number(unlockTimestamp)),
-            isPrivateBool,
-            finalCiphertext 
+            address,
+            {
+                uuid: currentUuid,
+                shortId: currentShortId,
+                author: finalAuthor,
+                content: `0x${Buffer.from(finalCiphertext as string).toString('hex')}`,
+                unlockTime: BigInt(Number(unlockTimestamp)),
+                isPrivate: isPrivateBool
+            },
+            false,
+            signature // <--- NEU: Die Unterschrift vom Backend!
         ],
         value: parseEther("0.000777"),
       }, {
@@ -235,7 +259,7 @@ export default function Home() {
     } catch (e: any) {
       console.error("Encryption/Seal Error:", e);
       let displayError = e.message || "Encryption failed";
-      if (displayError.includes("fetch")) displayError = "Drand Network Connection Failed";
+      if (displayError.includes("fetch")) displayError = "Network Connection Failed";
 
       toast({ title: "Encryption Error", description: displayError, variant: "destructive" });
       setIsGenerating(false);
@@ -269,7 +293,6 @@ export default function Home() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- SHARING LOGIC ---
   const getShareText = (platform: 'x' | 'farcaster') => {
       if(!successData) return "";
 
@@ -279,9 +302,9 @@ export default function Home() {
       const appHandle = platform === 'farcaster' ? '@aevera' : '@AEVERAxyz';
 
       if (mode === 'private') {
-          return `I just secured a Private Vault on ${appHandle}. 🔒\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nView my vault: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
+          return `I just secured a Private Vault on ${appHandle}. 白\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nView my vault: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
       } else {
-          return `I just anchored a message in time on ${appHandle}. ⏳\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nMint my legacy as NFT: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
+          return `I just anchored a message in time on ${appHandle}. 竢ｳ\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nMint my legacy as NFT: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
       }
   };
 
@@ -327,72 +350,8 @@ export default function Home() {
 
       <main className="w-full max-w-3xl px-4 flex flex-col gap-8 relative z-10">
 
-        {successData ? (
-            <Card className="bg-black/40 border-white/10 overflow-hidden backdrop-blur-md animate-in fade-in zoom-in-95 duration-500 shadow-2xl relative">
-                <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 bg-gradient-to-b ${mode === 'private' ? 'from-purple-500/10' : 'from-blue-500/10'} to-transparent blur-3xl`}></div>
-                <div className={`h-1.5 w-full bg-gradient-to-r ${mode === 'private' ? 'from-purple-600 via-pink-500 to-purple-600' : 'from-blue-500 via-cyan-400 to-blue-600'}`}></div>
-
-                <CardContent className="pt-16 pb-12 text-center flex flex-col items-center relative z-10">
-                    <div className="mb-8 relative">
-                        <div className={`absolute inset-0 ${mode === 'private' ? 'bg-purple-500/20' : 'bg-blue-500/20'} blur-2xl rounded-full`}></div>
-                        <div className={`relative w-24 h-24 rounded-full border-2 ${mode === 'private' ? 'border-purple-500/50 bg-purple-950/30 text-purple-400' : 'border-blue-500/50 bg-blue-950/30 text-blue-400'} flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)]`}>
-                            {mode === 'private' ? <ShieldCheck size={48} strokeWidth={1.5} /> : <Globe size={48} strokeWidth={1.5} />}
-                            <div className="absolute -bottom-2 -right-2 bg-green-500 text-black p-1.5 rounded-full border border-black shadow-lg">
-                                <CheckCircle size={16} strokeWidth={3} />
-                            </div>
-                        </div>
-                    </div>
-
-                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 tracking-tight font-display">
-                        Capsule Sealed & Secured.
-                    </h2>
-
-                    <p className="text-slate-300 max-w-lg mx-auto mb-10 text-lg font-light leading-relaxed">
-                        Your message has been encrypted and anchored on the Base blockchain. It is now beyond time.
-                    </p>
-
-                    {/* FIX: LAYOUT 1:1 AN CAPSULE.TSX ANGEPASST */}
-                    <div className="flex flex-col w-full max-w-md gap-4">
-                        <div className="flex gap-3 w-full">
-                            <Button
-                                onClick={() => window.location.href = `/capsule/${successData.shortId}`}
-                                className={`flex-1 h-12 font-bold bg-gradient-to-r ${mode === 'private' ? 'from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/20' : 'from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/20'} text-white rounded-xl shadow-lg transition-all hover:scale-[1.02]`}
-                            >
-                                VIEW CAPSULE <ArrowRight size={16} className="ml-2" />
-                            </Button>
-
-                            <Button 
-                                onClick={() => window.open(`${APP_CONFIG.EXPLORER_URL}/tx/${successData.txHash}`, '_blank')} 
-                                className="flex-1 h-12 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold transition-all"
-                                title="View Transaction Proof"
-                            >
-                                PROOF <ExternalLink size={16} className="ml-2"/>
-                            </Button>
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-2 w-full">
-                            <Button onClick={handleShareWarpcast} className="col-span-2 bg-[#855DCD] hover:bg-[#976fe0] text-white border-0 h-12 rounded-xl flex items-center gap-2" title="Share on Farcaster (Base Social)">
-                                <SiFarcaster className="w-5 h-5" /> 
-                                <span className="font-bold">Farcaster</span>
-                            </Button>
-                            <Button onClick={handleShareX} className="bg-white/5 hover:bg-white/10 text-white border border-white/10 h-12 rounded-xl" title="Share on X">
-                                <SiX className="w-5 h-5" />
-                            </Button>
-                            <Button onClick={handleCopyLink} className="bg-white/5 hover:bg-white/10 text-white border border-white/10 h-12 rounded-xl" title="Copy Link">
-                                <LinkIcon className="w-5 h-5" />
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="mt-12 pt-6 border-t border-white/5 w-full max-w-xs mx-auto">
-                        <button onClick={resetForm} className="text-xs uppercase tracking-widest text-slate-500 hover:text-cyan-400 transition-colors flex items-center justify-center gap-2 w-full">
-                            <Upload size={14} /> Seal another Message
-                        </button>
-                    </div>
-                </CardContent>
-            </Card>
-        ) : (
-            <Tabs defaultValue="public" onValueChange={(v) => setMode(v as any)} className="w-full">
+        {/* --- FORMULAR (IMMER SICHTBAR) --- */}
+        <Tabs defaultValue="public" onValueChange={(v) => setMode(v as any)} className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 mb-6 p-1 rounded-xl">
                 <TabsTrigger value="public" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white rounded-lg transition-all duration-300">
                 <Globe className="w-4 h-4 mr-2" /> Public Broadcast
@@ -439,7 +398,7 @@ export default function Home() {
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#050A15] border-white/10 text-white z-50">
                                 {getAvailableIdentities().map((id) => (
-                                    <SelectItem key={id.value} value={id.value}>{id.label}</SelectItem>
+                                    <SelectItem key={id.value} value={id.value}>{id.value === id.label ? id.label : id.label}</SelectItem>
                                 ))}
                                 </SelectContent>
                             </Select>
@@ -532,8 +491,6 @@ export default function Home() {
                     <Button
                     onClick={handleSeal}
                     disabled={isGenerating || isPending || isConfirming || !message || !sealerName || !selectedDate || message.length > 7777}
-                    // FIX: PUNKT 2 - Button-Text responsiv gemacht (text-sm md:text-lg)
-                    // damit "Seal for the Beyond (0.000777 ETH)" auf dem Handy nicht abgeschnitten wird.
                     className={`flex-1 h-14 w-full text-sm md:text-lg font-bold rounded-xl transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:hover:scale-100 ${mode === 'public' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/20' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/20'}`}
                     >
                     {isGenerating ? <><Loader2 className="animate-spin mr-2"/> {statusText}</> :
@@ -544,9 +501,89 @@ export default function Home() {
                 )}
                 </CardFooter>
             </Card>
-            </Tabs>
-        )}
+        </Tabs>
       </main>
+
+      {/* --- SUCCESS MODAL POPUP --- */}
+      {successData && (
+        <div 
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+            onClick={resetForm}
+        >
+            <Card 
+                className="w-full max-w-lg bg-[#0A0F1E] border border-white/10 overflow-hidden shadow-2xl relative"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* CLOSE BUTTON */}
+                <div className="absolute top-4 right-4 z-50">
+                    <Button variant="ghost" size="icon" onClick={resetForm} className="hover:bg-white/10 text-slate-400 hover:text-white rounded-full">
+                        <X className="w-5 h-5" />
+                    </Button>
+                </div>
+
+                <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 bg-gradient-to-b ${mode === 'private' ? 'from-purple-500/10' : 'from-blue-500/10'} to-transparent blur-3xl`}></div>
+                <div className={`h-1.5 w-full bg-gradient-to-r ${mode === 'private' ? 'from-purple-600 via-pink-500 to-purple-600' : 'from-blue-500 via-cyan-400 to-blue-600'}`}></div>
+
+                <CardContent className="pt-16 pb-12 text-center flex flex-col items-center relative z-10">
+                    <div className="mb-8 relative">
+                        <div className={`absolute inset-0 ${mode === 'private' ? 'bg-purple-500/20' : 'bg-blue-500/20'} blur-2xl rounded-full`}></div>
+                        <div className={`relative w-24 h-24 rounded-full border-2 ${mode === 'private' ? 'border-purple-500/50 bg-purple-950/30 text-purple-400' : 'border-blue-500/50 bg-blue-950/30 text-blue-400'} flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)]`}>
+                            {mode === 'private' ? <ShieldCheck size={48} strokeWidth={1.5} /> : <Globe size={48} strokeWidth={1.5} />}
+                            <div className="absolute -bottom-2 -right-2 bg-green-500 text-black p-1.5 rounded-full border border-black shadow-lg">
+                                <CheckCircle size={16} strokeWidth={3} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 className="text-3xl font-bold text-white mb-3 tracking-tight font-display">
+                        Capsule Sealed & Secured.
+                    </h2>
+
+                    <p className="text-slate-300 max-w-sm mx-auto mb-10 text-base font-light leading-relaxed">
+                        Your message has been encrypted and anchored on the Base blockchain. It is now beyond time.
+                    </p>
+
+                    <div className="flex flex-col w-full max-w-sm gap-4">
+                        <div className="flex gap-3 w-full">
+                            <Button
+                                onClick={() => window.location.href = `/capsule/${successData.shortId}`}
+                                className={`flex-1 h-12 font-bold bg-gradient-to-r ${mode === 'private' ? 'from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 shadow-purple-500/20' : 'from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 shadow-blue-500/20'} text-white rounded-xl shadow-lg transition-all hover:scale-[1.02]`}
+                            >
+                                VIEW CAPSULE <ArrowRight size={16} className="ml-2" />
+                            </Button>
+
+                            <Button 
+                                onClick={() => window.open(`${APP_CONFIG.EXPLORER_URL}/tx/${successData.txHash}`, '_blank')} 
+                                className="flex-1 h-12 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-xl font-bold transition-all"
+                                title="View Transaction Proof"
+                            >
+                                PROOF <ExternalLink size={16} className="ml-2"/>
+                            </Button>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2 w-full">
+                            <Button onClick={handleShareWarpcast} className="col-span-2 bg-[#855DCD] hover:bg-[#976fe0] text-white border-0 h-12 rounded-xl flex items-center gap-2" title="Share on Farcaster">
+                                <SiFarcaster className="w-5 h-5" /> 
+                                <span className="font-bold">Farcaster</span>
+                            </Button>
+                            <Button onClick={handleShareX} className="bg-white/5 hover:bg-white/10 text-white border border-white/10 h-12 rounded-xl" title="Share on X">
+                                <SiX className="w-5 h-5" />
+                            </Button>
+                            <Button onClick={handleCopyLink} className="bg-white/5 hover:bg-white/10 text-white border border-white/10 h-12 rounded-xl" title="Copy Link">
+                                <LinkIcon className="w-5 h-5" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-white/5 w-full max-w-xs mx-auto">
+                        <button onClick={resetForm} className="text-xs uppercase tracking-widest text-slate-500 hover:text-cyan-400 transition-colors flex items-center justify-center gap-2 w-full">
+                            <Upload size={14} /> Seal another Message
+                        </button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+      )}
 
       <div className="w-full mt-16 -mb-20">
         <ArchiveTable key={archiveRefreshTrigger} />

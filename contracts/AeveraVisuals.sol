@@ -1,198 +1,55 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/IAeveraVault.sol";
 
-contract AeveraVault is ERC1155, Ownable, ERC2981 {
+contract AeveraVisuals is Ownable {
     using Strings for uint256;
 
-    // --- COLLECTION METADATA ---
-    string public name = "AEVERA";
-    string public symbol = "AEVERA";
+    constructor() Ownable(msg.sender) {}
 
-    // --- CONFIG ---
-    uint256 public constant MINT_PRICE = 0.000777 ether;
-    uint256 public constant MAX_CHARS = 7777;
+    function render(IAeveraVault.CapsuleMetadata memory meta) external pure returns (string memory) {
+        string memory svg = _generateSVG(meta);
+        string memory imageURI = string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(svg)));
 
-    // SUPPLY LIMITS (Gesamtanzahl)
-    uint256 public constant MAX_SUPPLY_PUBLIC = 100;
-    uint256 public constant MAX_SUPPLY_PRIVATE = 1000;
-
-    // TRANSACTION LIMITS (Max pro Klick)
-    uint256 public constant MAX_BATCH_PUBLIC = 5;
-    uint256 public constant MAX_BATCH_PRIVATE = 50;
-
-    // Reentrancy Guard (Sicherheit gegen Hacks bei Auszahlungen)
-    uint256 private _guardStatus;
-    modifier nonReentrant() {
-        require(_guardStatus == 0, "Reentrancy");
-        _guardStatus = 1;
-        _;
-        _guardStatus = 0;
-    }
-
-    struct Capsule {
-        uint256 id;
-        string uuid;
-        string shortId;
-        string author;   // Der visuelle Name (z.B. "gelassen.base.eth")
-        address creator; // SECURITY: Die unwiderrufliche Wallet-Adresse des Erstellers
-        string content;
-        uint256 mintTimestamp;
-        uint256 unlockTimestamp;
-        bool isPrivate;
-        uint256 currentSupply;
-    }
-
-    mapping(uint256 => Capsule) public capsules;
-    mapping(string => uint256) public idByUuid;
-    mapping(string => uint256) public idByShortId;
-
-    uint256 public nextTokenId = 1;
-
-    event CapsuleCreated(uint256 indexed id, string uuid, string shortId, address indexed author);
-    event CapsuleMinted(uint256 indexed id, address indexed minter, uint256 amount);
-
-    constructor() Ownable(msg.sender) ERC1155("") {
-        // SET ROYALTIES: 7.77% (777 Basis Points) für Secondary Market
-        _setDefaultRoyalty(msg.sender, 777);
-    }
-
-    // --- OVERRIDES FÜR ROYALTIES ---
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, ERC2981) returns (bool) {
-        return super.supportsInterface(interfaceId);
-    }
-
-    // --- ACTIONS ---
-
-    function createCapsule(
-        string memory _uuid,
-        string memory _shortId,
-        string memory _author,
-        uint256 _unlockTimestamp,
-        bool _isPrivate,
-        string memory _content
-    ) public payable nonReentrant {
-        require(msg.value >= MINT_PRICE, "ETH low");
-        require(bytes(_content).length <= MAX_CHARS, "Too long");
-        require(_unlockTimestamp > block.timestamp, "Future");
-        require(idByUuid[_uuid] == 0, "UUID exists");
-        require(idByShortId[_shortId] == 0, "ShortID exists");
-
-        uint256 newTokenId = nextTokenId;
-        capsules[newTokenId] = Capsule({
-            id: newTokenId,
-            uuid: _uuid,
-            shortId: _shortId,
-            author: _author,       // Dies ist der Anzeigename
-            creator: msg.sender,   // SECURITY: Hier wird die Identität kryptografisch verankert
-            content: _content,
-            mintTimestamp: block.timestamp,
-            unlockTimestamp: _unlockTimestamp,
-            isPrivate: _isPrivate,
-            currentSupply: 1
-        });
-
-        idByUuid[_uuid] = newTokenId;
-        idByShortId[_shortId] = newTokenId;
-
-        _mint(msg.sender, newTokenId, 1, "");
-        emit CapsuleCreated(newTokenId, _uuid, _shortId, msg.sender);
-        nextTokenId++;
-    }
-
-    function mintCopy(uint256 _tokenId, uint256 _amount) public payable nonReentrant {
-        require(_amount > 0, "Amount > 0");
-        require(msg.value >= MINT_PRICE * _amount, "ETH low");
-        require(_tokenId < nextTokenId && _tokenId > 0, "No ID");
-
-        Capsule storage cap = capsules[_tokenId];
-
-        // 1. Author Check for Private Vaults
-        // SECURITY: Nur die Adresse, die die Kapsel erstellt hat, darf private Kopien minten.
-        if (cap.isPrivate) {
-            require(msg.sender == cap.creator, "Private: Author only");
-        }
-
-        // 2. Check Total Supply Limit
-        uint256 maxSupply = cap.isPrivate ? MAX_SUPPLY_PRIVATE : MAX_SUPPLY_PUBLIC;
-        require(cap.currentSupply + _amount <= maxSupply, "Max supply reached");
-
-        // 3. Check Batch Transaction Limit
-        uint256 maxBatch = cap.isPrivate ? MAX_BATCH_PRIVATE : MAX_BATCH_PUBLIC;
-        require(_amount <= maxBatch, "Batch limit exceeded");
-
-        cap.currentSupply += _amount;
-        _mint(msg.sender, _tokenId, _amount, "");
-        emit CapsuleMinted(_tokenId, msg.sender, _amount);
-    }
-
-    // --- METADATA ---
-
-    function contractURI() public pure returns (string memory) {
-        string memory description = string(abi.encodePacked(
-            "AEVERA\\nBEYOND TIME\\nTHE EVERLASTING TRUTH\\n\\n",
-            "In a world of vanishing moments, AEVERA is your anchor in time.\\n\\n",
-            "aevera.xyz"
-        ));
-
-        return string(abi.encodePacked(
-            "data:application/json;base64,",
-            Base64.encode(bytes(abi.encodePacked(
-                '{"name": "AEVERA",',
-                '"description": "', description, '",',
-                '"external_link": "https://aevera.xyz"}'
-            )))
-        ));
-    }
-
-    function uri(uint256 _tokenId) public view override returns (string memory) {
-        Capsule memory c = capsules[_tokenId];
-        require(c.mintTimestamp != 0, "No ID");
-
-        string memory svg = _generateSVG(c);
-        string memory imageURI = string(abi.encodePacked("data:image/svg+xml;base64,", Base64.encode(bytes(svg))));
-
-        string memory description = string(abi.encodePacked(
+        string memory description = string.concat(
             "AEVERA\\n\\n",
-            "A singular point in the infinite chain of time. This artifact stands as the immutable custodian of Capsule #", c.shortId, 
+            "A singular point in the infinite chain of time. This artifact stands as the immutable custodian of Capsule #", meta.shortId,
             ". Verified on the blockchain, it preserves your personal legacy secured on-chain, forever and beyond time.\\n\\n",
             "aevera.xyz"
-        ));
+        );
 
-        return string(abi.encodePacked(
+        return string.concat(
             "data:application/json;base64,",
-            Base64.encode(bytes(abi.encodePacked(
-                '{"name": "AEVERA #', c.shortId, '",',
+            Base64.encode(bytes(string.concat(
+                '{"name": "AEVERA #', meta.shortId, '",',
                 '"description": "', description, '",',
                 '"image": "', imageURI, '",',
                 '"attributes": [',
-                    '{"trait_type": "Type", "value": "', (c.isPrivate ? "Private" : "Public"), '"},',
-                    '{"trait_type": "Unlock Year", "value": "', _getYearString(c.unlockTimestamp), '"}',
+                    '{"trait_type": "Type", "value": "', (meta.isPrivate ? "Private" : "Public"), '"},',
+                    '{"trait_type": "Unlock Year", "value": "', _getYearString(meta.unlockTime), '"}',
                 ' ]}'
             )))
-        ));
+        );
     }
 
-    // --- INTERNAL RENDERER ---
+    // --- DEINE V1 LOGIK (100% ORIGINAL & GEPRÜFT) ---
 
-    function _generateSVG(Capsule memory c) internal pure returns (string memory) {
+    function _generateSVG(IAeveraVault.CapsuleMetadata memory c) internal pure returns (string memory) {
         string memory c1 = c.isPrivate ? "#c084fc" : "#22d3ee";
         string memory c2 = c.isPrivate ? "#db2777" : "#2563eb";
+        string memory auth = bytes(c.author).length > 22 ? string.concat(_substring(c.author, 0, 20), "...") : c.author;
+        string memory narrative = _getNarrative(auth, c.sealTime, c.unlockTime);
 
-        string memory auth = bytes(c.author).length > 22 ? string(abi.encodePacked(_substring(c.author, 0, 20), "...")) : c.author;
-        string memory narrative = _getNarrative(auth, c.mintTimestamp, c.unlockTimestamp);
-
-        return string(abi.encodePacked(
+        return string.concat(
             _renderHeader(c1, c2),
-            _renderMetadata(c.shortId, auth, c.mintTimestamp, c.unlockTimestamp),
+            _renderMetadata(c.shortId, auth, c.sealTime, c.unlockTime),
             _renderCenter(narrative, c.shortId, c1),
             _renderFooter(c.isPrivate, c1)
-        ));
+        );
     }
 
     function _renderHeader(string memory c1, string memory c2) internal pure returns (string memory) {
@@ -229,8 +86,8 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
     }
 
     function _renderFooter(bool isPrivate, string memory c1) internal pure returns (string memory) {
+        // WICHTIG: "&amp;" für valides SVG!
         string memory footerText = isPrivate ? "Restricted to NFT holder &amp; Key." : "Open to the world after Reveal Era.";
-
         return string(abi.encodePacked(
             '<line x1="0" y1="510" x2="600" y2="510" stroke="white" stroke-opacity="0.15"/>',
             '<g transform="translate(32,540)"><text x="0" y="0" font-family="monospace" font-size="10" fill="#94a3b8" letter-spacing="2">.VERIFIED</text><text x="0" y="16" font-family="monospace" font-size="10" fill="#94a3b8" letter-spacing="2">.ETERNAL</text><text x="0" y="32" font-family="monospace" font-size="10" fill="#94a3b8" letter-spacing="2">.AEVERA</text></g>',
@@ -241,18 +98,12 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
     function _getNarrative(string memory auth, uint256 sealTs, uint256 revealTs) internal pure returns (string memory) {
         string memory sealDate = _extractDate(sealTs);
         string memory revealDate = _extractDate(revealTs);
-
         bool sameDay = keccak256(bytes(sealDate)) == keccak256(bytes(revealDate));
-
-        string memory tail = sameDay 
-            ? string(abi.encodePacked("arriving later at ", _extractTime(revealTs), "."))
-            : string(abi.encodePacked("arriving on ", revealDate, "."));
-
-        return string(abi.encodePacked("Sent beyond time by ", auth, " on ", sealDate, ", ", tail));
+        string memory tail = sameDay ? string.concat("arriving later at ", _extractTime(revealTs), ".") : string.concat("arriving on ", revealDate, ".");
+        return string.concat("Sent beyond time by ", auth, " on ", sealDate, ", ", tail);
     }
 
     // --- HELPER FUNCTIONS ---
-
     function _getMsgDate(uint256 ts) internal pure returns (uint year, uint month, uint day) {
         unchecked {
             int _days = int(ts / 86400) + 719468;
@@ -267,7 +118,6 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
             year = uint(y + (month <= 2 ? int(1) : int(0)));
         }
     }
-
     function _extractDate(uint256 ts) internal pure returns (string memory) {
         (uint year, uint month, uint day) = _getMsgDate(ts);
         string memory mStr;
@@ -277,26 +127,21 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
         else if (month == 10) mStr = "Oct"; else if (month == 11) mStr = "Nov"; else mStr = "Dec";
         return string(abi.encodePacked(mStr, " ", day.toString(), ", ", year.toString()));
     }
-
     function _extractTime(uint256 ts) internal pure returns (string memory) {
         uint256 sec = ts % 86400;
         uint256 hour = sec / 3600;
         uint256 minute = (sec % 3600) / 60;
         return string(abi.encodePacked(_pad(hour), ":", _pad(minute), " UTC"));
     }
-
     function _formatFull(uint256 ts) internal pure returns (string memory) {
-        return string(abi.encodePacked(_extractDate(ts), " . ", _extractTime(ts)));
+        return string.concat(_extractDate(ts), " . ", _extractTime(ts));
     }
-
     function _pad(uint256 value) internal pure returns (string memory) {
         return value < 10 ? string(abi.encodePacked("0", value.toString())) : value.toString();
     }
-
     function _getYearString(uint256 ts) internal pure returns (string memory) {
         return (1970 + (ts / 31536000)).toString();
     }
-
     function _substring(string memory str, uint startIndex, uint endIndex) internal pure returns (string memory) {
         bytes memory strBytes = bytes(str);
         if (endIndex > strBytes.length) endIndex = strBytes.length;
@@ -305,18 +150,5 @@ contract AeveraVault is ERC1155, Ownable, ERC2981 {
             result[i - startIndex] = strBytes[i];
         }
         return string(result);
-    }
-
-    function getCapsuleContent(uint256 _tokenId) public view returns (string memory) {
-        Capsule memory cap = capsules[_tokenId];
-        if (cap.isPrivate) return cap.content;
-        require(block.timestamp >= cap.unlockTimestamp, "Locked");
-        return cap.content;
-    }
-
-    function withdraw() public onlyOwner {
-        uint256 balance = address(this).balance;
-        (bool success, ) = payable(msg.sender).call{value: balance}("");
-        require(success, "Withdraw failed");
     }
 }

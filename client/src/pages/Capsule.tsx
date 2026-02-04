@@ -9,21 +9,25 @@ import { MintTable, MintEventData } from "@/components/MintTable";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import CryptoJS from 'crypto-js';
-import { readContract } from '@wagmi/core';
+// FIX: readContracts hinzufügen für Batch-Abfragen (wie ArchiveTable)
+import { readContract, readContracts } from '@wagmi/core';
 import { config } from "../OnchainProviders";
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useSwitchChain, usePublicClient } from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { CustomConnectButton } from "@/components/CustomConnectButton";
-import AeveraVaultABI from "../abis/AeveraVaultABI.json";
 import { fromHex, isHex, formatEther } from "viem";
 
-// --- CONFIG IMPORTIEREN ---
+// --- KORREKTE DATEINAMEN FÜR V2 ---
+import AeveraVaultABI from "../abis/AeveraEternalVault.json"; 
+import AeveraGatewayABI from "../abis/AeveraGateway.json";
+
+// --- CONFIG ---
 import { APP_CONFIG } from "../lib/config";
 
-// --- DRAND LIBRARY & CONFIG ---
+// --- DRAND ---
 import { timelockDecrypt } from "tlock-js";
 
-// --- OFFICIAL BRAND ICONS (REACT-ICONS) ---
+// --- ICONS ---
 import { SiFarcaster, SiX } from "react-icons/si";
 
 const CHAIN_HASH = "52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971";
@@ -50,7 +54,7 @@ function formatToStrictUTC(ts: number): string {
 }
 
 // ------------------------------------------------------------------
-// 1. NFT PREVIEW MODAL (FORCED HORIZONTAL LAYOUT)
+// 1. NFT PREVIEW MODAL
 // ------------------------------------------------------------------
 function NFTDetailModal({ nft, capsule, isOpen, onClose }: { nft: MintEventData | null, capsule: any, isOpen: boolean, onClose: () => void }) {
     const [metadata, setMetadata] = useState<{ image: string, name: string, description: string, attributes: any[] } | null>(null);
@@ -72,8 +76,7 @@ function NFTDetailModal({ nft, capsule, isOpen, onClose }: { nft: MintEventData 
         setError(null);
         try {
             const uriResult = await readContract(config, {
-                // UPDATE: Config Address
-                address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
+                address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`,
                 abi: AeveraVaultABI,
                 functionName: 'uri',
                 args: [capsule.id]
@@ -125,23 +128,10 @@ function NFTDetailModal({ nft, capsule, isOpen, onClose }: { nft: MintEventData 
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
-            {/* FIX: 'flex-col' ENTFERNT. Nur noch ein Container-Rahmen.
-               max-h-[85vh]: Damit es auf dem Handy nicht über den Bildschirmrand hinausgeht.
-            */}
             <div className="bg-[#0A0F1E] border border-white/10 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden block max-h-[85vh]" onClick={e => e.stopPropagation()}>
-
-                {/* SCROLL ZONE: Erlaubt horizontales Wischen */}
                 <div className="w-full overflow-x-auto custom-scrollbar">
-
-                    {/* HARDCORE FIX: style={{ display: 'flex', ... }}
-                       Dies überschreibt alle Tailwind-Klassen und zwingt das Layout horizontal (row) zu sein.
-                       minWidth: '800px' garantiert, dass es breit genug für Bild+Text nebeneinander ist.
-                    */}
                     <div className="h-[500px]" style={{ display: 'flex', flexDirection: 'row', minWidth: '800px' }}>
-
-                        {/* LEFT: IMAGE (50% Breite) */}
                         <div className="w-1/2 bg-black flex items-center justify-center p-8 border-r border-white/10 relative overflow-hidden shrink-0 h-full">
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] bg-blue-500/5 blur-3xl rounded-full pointer-events-none"></div>
                             <div className="aspect-square w-full max-w-[350px] shadow-[0_0_30px_rgba(0,0,0,0.5)] flex items-center justify-center bg-[#020617] rounded-lg overflow-hidden relative">
                                 {loading ? (
                                     <div className="flex flex-col items-center gap-3 text-slate-500 animate-pulse">
@@ -161,7 +151,6 @@ function NFTDetailModal({ nft, capsule, isOpen, onClose }: { nft: MintEventData 
                             </div>
                         </div>
 
-                        {/* RIGHT: DETAILS (50% Breite) */}
                         <div className="w-1/2 flex flex-col bg-[#0A0F1E] shrink-0 h-full">
                             <div className="flex items-center justify-between p-6 border-b border-white/5">
                                 <div>
@@ -201,7 +190,6 @@ function NFTDetailModal({ nft, capsule, isOpen, onClose }: { nft: MintEventData 
                                 </div>
                             </div>
                             <div className="p-6 border-t border-white/5 bg-[#050A15]">
-                                {/* UPDATE: Dynamic Explorer Link from Config */}
                                 <a href={`${APP_CONFIG.EXPLORER_URL}/tx/${nft.txHash}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black hover:bg-slate-200 font-bold rounded-lg transition-colors text-sm uppercase tracking-wide">
                                     VIEW ON BLOCKCHAIN <ExternalLink className="w-4 h-4 ml-2" />
                                 </a>
@@ -251,7 +239,7 @@ function CountdownTimer({ targetDate, onComplete }: { targetDate: number | null,
       <div className="flex items-center gap-2 text-[#3B82F6] mb-2"><Lock className="w-5 h-5 animate-pulse" /><span className="text-sm font-bold tracking-widest uppercase">Content Locked</span></div>
       <div className="grid grid-flow-col gap-4 text-center auto-cols-max">
         {['days', 'hours', 'minutes', 'seconds'].map((unit) => (
-           <div key={unit} className={`flex flex-col p-2 bg-white/5 rounded-xl border border-white/10 w-16 ${unit === 'seconds' ? 'shadow-[0_0_15px_rgba(22,82,240,0.3)]' : ''}`}>
+           <div key={unit} className={`flex flex-col p-2 bg-white/5 rounded-xl border border-white/10 min-w-[4rem] w-auto px-3 ${unit === 'seconds' ? 'shadow-[0_0_15px_rgba(22,82,240,0.3)]' : ''}`}>
              <span className={`countdown font-mono text-3xl font-bold ${unit === 'seconds' ? 'text-[#3B82F6]' : 'text-white'}`}>
                {/* @ts-ignore */}
                {timeLeft?.[unit]}
@@ -380,7 +368,6 @@ function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsul
              <div className="relative z-20 w-full h-full flex flex-col">
                {localRevealed ? (
                  needsPassword ? (
-                    // --- LOCKED / NEEDS PASSWORD OR DECRYPTING ---
                     <div className="flex flex-col items-center justify-center h-full gap-4 w-full max-w-xs z-30 animate-in fade-in zoom-in-95 mx-auto">
                         <p className="text-center text-xs text-[#94a3b8] uppercase tracking-widest mb-2 font-mono">
                             {isDecrypting ? "DECRYPTING TIMELOCK..." : (isPrivate ? "VAULT LOCKED" : "ENCRYPTED")}
@@ -388,7 +375,6 @@ function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsul
                         {isDecrypting ? (
                             <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
                         ) : isPrivate ? (
-                            // PRIVATE LOGIC
                             !isConnected ? (
                                 <Button onClick={openConnectModal} className="bg-slate-800 hover:bg-slate-700 text-white font-bold tracking-wider text-xs h-10 w-full">CONNECT WALLET</Button>
                             ) : !hasAccess ? (
@@ -404,12 +390,10 @@ function RevealedMessage({ message, sealerIdentity, sealedAt, revealedAt, capsul
                                 </>
                             )
                         ) : (
-                            // PUBLIC LOGIC (Automated)
                             <Button onClick={() => onDecrypt("")} className="bg-blue-600 hover:bg-blue-500 text-white font-bold tracking-wider text-xs h-10 w-full">DECRYPT MESSAGE</Button>
                         )}
                     </div>
                  ) : (
-                    // --- SHOW CONTENT ---
                     <div className="w-full h-full overflow-y-auto custom-scrollbar relative">
                         {message ? (
                              <div className="min-h-full flex flex-col items-center justify-center px-12 py-8 text-center">
@@ -460,25 +444,20 @@ function CapsuleContent() {
   const [loading, setLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState("Initializing...");
   const [scale, setScale] = useState(1);
-  const [hasAccess, setHasAccess] = useState(false); // New state for access control
+  const [hasAccess, setHasAccess] = useState(false); 
+  const [gatewayAddr, setGatewayAddr] = useState<string | null>(null); 
 
-  // --- DECRYPTION STATE ---
   const [isDecrypted, setIsDecrypted] = useState(false);
   const [decryptedText, setDecryptedText] = useState("");
   const [isDecrypting, setIsDecrypting] = useState(false);
 
-  // SAFEGUARD: prevents double execution
   const isDecryptingRef = useRef(false);
-  // POLLING: keeps track of interval
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const [forceUpdate, setForceUpdate] = useState(0); 
   const [selectedNft, setSelectedNft] = useState<MintEventData | null>(null);
 
-  // NEU: MINT SUCCESS STATE
   const [mintSuccessHash, setMintSuccessHash] = useState<string | null>(null);
-
-  // --- NEW: MINT QUANTITY STATE ---
   const [quantity, setQuantity] = useState(1);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -487,10 +466,10 @@ function CapsuleContent() {
   const { isConnected, address, chain } = useAccount(); 
   const { switchChain } = useSwitchChain();
   const { openConnectModal } = useConnectModal();
-  const { writeContract, data: hash, isPending: isWritePending } = useWriteContract();
+
+  const { writeContract, data: hash, isPending: isWritePending, reset } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
-  // TOKEN GATING CHECK
   useEffect(() => {
       const checkAccess = async () => {
           if (!capsule || !address || !isConnected) {
@@ -498,14 +477,12 @@ function CapsuleContent() {
               return;
           }
           if (!capsule.isPrivate) {
-              setHasAccess(true); // Public always accessible
+              setHasAccess(true); 
               return;
           }
           try {
-              // Check balance for this specific capsule ID
-              // UPDATE: Config Address
               const balance = await readContract(config, {
-                  address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
+                  address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`,
                   abi: AeveraVaultABI,
                   functionName: 'balanceOf',
                   args: [address, capsule.id]
@@ -519,35 +496,87 @@ function CapsuleContent() {
       };
 
       checkAccess();
-  }, [capsule, address, isConnected, forceUpdate]); // Check on load/update/connect
+  }, [capsule, address, isConnected, forceUpdate]);
 
+  // FIX: BATCH SEARCH FETCHING (Wie ArchiveTable)
   const fetchCapsule = async () => {
         if (!searchId) return;
 
-        // Initial Loading State (Spinner only on first load)
-        if (!capsule && loading) {
+        if (capsule && (capsule.shortId !== searchId && capsule.uuid !== searchId)) {
+            setCapsule(null);
+            setLoading(true);
+            setStatusMsg("Accessing Base Blockchain...");
+        } else if (!capsule && loading) {
             setLoading(true);
             setStatusMsg("Accessing Base Blockchain...");
         }
 
         try {
-            // DIRECT LOOKUP (V7.2)
+            try {
+               const gw = await readContract(config, { 
+                   address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`, 
+                   abi: AeveraVaultABI, 
+                   functionName: 'gateway' 
+               }) as string;
+               setGatewayAddr(gw);
+            } catch(e) {}
+
             let tokenId = 0n;
 
-            // UPDATE: Config Address
-            const idFromShort = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'idByShortId', args: [searchId] }) as bigint;
-            if (idFromShort > 0n) tokenId = idFromShort;
-            else {
-                const idFromUuid = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'idByUuid', args: [searchId] }) as bigint;
-                if (idFromUuid > 0n) tokenId = idFromUuid;
-            }
+            // --- STRATEGIE: BATCH FETCH (DIE "RICHTIGE FRAGE") ---
+            // Wir scannen die letzten 50 Kapseln auf einmal und suchen PRIMÄR nach der ShortID.
+            // Das löst das Kollisions-Problem, da wir data[2] (ShortID) exakt prüfen.
+            try {
+                const nextId = await readContract(config, { address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'nextTokenId' }) as bigint;
+                const maxId = Number(nextId) - 1;
 
+                if (maxId > 0) {
+                    const idsToScan = [];
+                    const limit = Math.max(0, maxId - 50); 
+                    for (let i = maxId; i > limit; i--) {
+                        idsToScan.push(BigInt(i));
+                    }
+
+                    const results = await readContracts(config, {
+                        contracts: idsToScan.map(id => ({
+                            address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`,
+                            abi: AeveraVaultABI as any,
+                            functionName: 'capsules',
+                            args: [id]
+                        }))
+                    });
+
+                    // WICHTIG: Wir filtern hier nach der SHORT-ID (data[2]).
+                    // Selbst wenn eine UUID "AEVERA" heißt, ignorieren wir sie, wenn die ShortID nicht passt.
+                    const matchIndex = results.findIndex(res => {
+                        if (res.status !== 'success' || !res.result) return false;
+                        const d = res.result as any;
+                        // V2 Struct: [creator, author, shortId, uuid...]
+                        return d[2] === searchId; 
+                    });
+
+                    if (matchIndex !== -1) {
+                        tokenId = idsToScan[matchIndex];
+                    }
+                }
+            } catch(e) { console.warn("Batch scan error", e); }
+
+            // FALLBACK für alte Kapseln (außerhalb der letzten 50) oder UUID-Links
+            // Nur ausführen, wenn oben NICHTS gefunden wurde.
             if (tokenId === 0n) {
                 try {
-                    const directId = BigInt(searchId);
-                    const nextId = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'nextTokenId' }) as bigint;
-                    if (directId > 0n && directId < nextId) tokenId = directId;
-                } catch(e) {}
+                   // Versuch als UUID (z.B. wenn jemand einen alten UUID-Link nutzt)
+                   const idFromUuid = await readContract(config, { address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'idByUuid', args: [searchId] }) as bigint;
+                   if (idFromUuid > 0n) tokenId = idFromUuid;
+                   else {
+                       // Versuch als direkte ID (Zahl)
+                       try {
+                           const directId = BigInt(searchId);
+                           const nextId = await readContract(config, { address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'nextTokenId' }) as bigint;
+                           if (directId > 0n && directId < nextId) tokenId = directId;
+                       } catch(e) {}
+                   }
+                } catch (e) {}
             }
 
             if (tokenId === 0n) {
@@ -557,42 +586,67 @@ function CapsuleContent() {
                 return;
             }
 
-            const data: any = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'capsules', args: [tokenId] });
+            // 2. Fetch Metadata (Finaler Abruf mit korrekter ID)
+            const data: any = await readContract(config, { address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'capsules', args: [tokenId] });
 
-            let content = ""; // Das ist jetzt der Ciphertext (Salat)
-
-            const nowSec = Math.floor(Date.now() / 1000);
-            const unlockTime = Number(data[7]); // Shifted from 6 to 7
-            const isRevealed = nowSec >= unlockTime;
-            const isPrivate = data[8]; // Shifted from 7 to 8
-
-            // Wenn revealed, holen wir den verschlüsselten String
-            if (isRevealed || isPrivate) {
-                try {
-                    // UPDATE: Config Address
-                    const contentResult = await readContract(config, { address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'getCapsuleContent', args: [tokenId] }) as string;
-                    content = contentResult;
-                } catch (err) {}
+            // SAFETY CHECK: Double check gegen Ghost Data
+            // Wenn ShortID und UUID und ID nicht passen -> Fehler.
+            if (data[2] !== searchId && data[3] !== searchId && tokenId.toString() !== searchId) {
+                 console.warn("Mismatch detected! Capsule data does not match URL ID.");
+                 setCapsule(null);
+                 setLoading(false);
+                 return;
             }
 
-            // --- SMART LOGIC: Wenn revealed, aber kein Content -> Polling erzwingen (SCHNELLER: 1000ms) ---
+            const supply = await readContract(config, { address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'totalSupplyPerId', args: [tokenId] }) as bigint;
+
+            let content = ""; 
+            const nowSec = Math.floor(Date.now() / 1000);
+            const unlockTime = Number(data[5]); 
+            const isRevealed = nowSec >= unlockTime;
+            const isPrivate = data[6];
+
+            if (isRevealed || isPrivate) {
+                try {
+                    const contentResult = await readContract(config, { address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`, abi: AeveraVaultABI, functionName: 'getContent', args: [tokenId] }) as string;
+                    let cleanContent = contentResult;
+
+                    if (isHex(cleanContent)) {
+                        try { cleanContent = fromHex(cleanContent, 'string'); } catch(e) {}
+                    }
+                    // eslint-disable-next-line no-control-regex
+                    cleanContent = cleanContent.replace(/\x00/g, '').trim();
+
+                    try {
+                        if (cleanContent.startsWith('"') || cleanContent.startsWith('{')) {
+                             const parsed = JSON.parse(cleanContent);
+                             content = typeof parsed === 'string' ? parsed : JSON.stringify(parsed);
+                        } else {
+                             content = cleanContent;
+                        }
+                    } catch (jsonErr) {
+                        content = cleanContent;
+                    }
+                } catch (err) { console.warn("Content read failed", err); }
+            }
+
             if (!isPrivate && isRevealed && !content) {
                 setTimeout(() => setForceUpdate(n => n + 1), 1000);
             }
 
             setCapsule({
                 id: tokenId,
-                uuid: data[1],
+                uuid: data[3],
                 shortId: data[2],
-                author: data[3],
-                creator: data[4], // Captured for author check
-                sealerName: data[3],
+                author: data[1],
+                creator: data[0],
+                sealerName: data[1],
                 contentEncrypted: content, 
-                createdAt: Number(data[6]), // Shifted from 5 to 6
+                createdAt: Number(data[4]),
                 unlockTime: unlockTime,
                 isPrivate: isPrivate,
                 maxSupply: isPrivate ? 1000 : 100,
-                mintedCount: Number(data[9]), // Shifted from 8 to 9
+                mintedCount: Number(supply),
                 isRevealed: isRevealed
             });
 
@@ -606,68 +660,36 @@ function CapsuleContent() {
 
   useEffect(() => { fetchCapsule(); }, [searchId, forceUpdate]);
 
-  // --- AUTOMATISCHE ENTSCHLÜSSELUNG FÜR PUBLIC ---
   useEffect(() => {
-      // Guard Clauses
       if (!capsule || capsule.isPrivate || !capsule.isRevealed || isDecrypted) return;
-
       if (capsule.contentEncrypted) {
-          // Content ist da! Polling stoppen und decrypten.
-          if(pollingRef.current) {
-              clearInterval(pollingRef.current);
-              pollingRef.current = null;
-          }
-          // Nur starten, wenn nicht schon läuft
-          if (!isDecryptingRef.current) {
-              // Pass the actual content to decrypt logic
-              handleDecrypt(capsule.contentEncrypted);
-          }
+          if(pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+          if (!isDecryptingRef.current) handleDecrypt(capsule.contentEncrypted);
       } else {
-          // Zeit ist um, aber Content fehlt (Blockchain Lag). Start Polling.
           if (!pollingRef.current) {
-              pollingRef.current = setInterval(() => {
-                  setForceUpdate(prev => prev + 1);
-              }, 1000);
+              pollingRef.current = setInterval(() => setForceUpdate(prev => prev + 1), 1000);
           }
-          // Visuell im "Loading" bleiben
           if (!isDecrypting) setIsDecrypting(true);
       }
-
       return () => { if(pollingRef.current) clearInterval(pollingRef.current); };
   }, [capsule, isDecrypted, isDecrypting, forceUpdate]);
 
-
-  // FIX: Timer Ende zwingt auch die Capsule sofort in den Revealed Status
   const handleTimerComplete = () => { 
       if(capsule) {
           setCapsule((prev: any) => ({ ...prev, isRevealed: true }));
-
-          // FIX: Bei Private MUSS der Spinner aus sein, damit das Passwortfeld kommt.
-          if (!capsule.isPrivate) {
-              setIsDecrypting(true);
-          } else {
-              setIsDecrypting(false); 
-          }
+          if (!capsule.isPrivate) setIsDecrypting(true); else setIsDecrypting(false); 
       }
       setForceUpdate(prev => prev + 1);
   };
 
-  // --- CLEAN DECRYPT FUNCTION ---
   const handleDecrypt = async (input: string) => {
-      // Input ist Ciphertext (Public) oder Passwort (Private)
       if (!capsule) return;
-
-      // Safety check for Public
       if (!capsule.isPrivate && !input) return;
-
-      // Ref check
       if (isDecryptingRef.current) return;
       isDecryptingRef.current = true;
-
       setIsDecrypting(true);
 
       try {
-          // 1. TIMELOCK (Immer auf dem Blockchain-Content)
           const response = await fetch(`${DRAND_URL}/${CHAIN_HASH}/info`);
           if (!response.ok) throw new Error("Drand Network Error");
           const chainInfo = await response.json();
@@ -681,15 +703,12 @@ function CapsuleContent() {
               options: () => ({}) 
           };
 
-          // WICHTIG: Wir nehmen IMMER den Content aus der Kapsel!
           const decryptedBytes = await timelockDecrypt(capsule.contentEncrypted, safeClient as any);
           const intermediateString = new TextDecoder().decode(decryptedBytes);
-
           let finalMessage = intermediateString;
 
-          // 2. AES (Nur bei Private, mit dem Input als Passwort)
           if (capsule.isPrivate) {
-              const password = input; // Input ist hier das Passwort
+              const password = input; 
               const bytes = CryptoJS.AES.decrypt(intermediateString, password);
               const originalText = bytes.toString(CryptoJS.enc.Utf8);
               if (!originalText) throw new Error("Wrong password");
@@ -702,13 +721,39 @@ function CapsuleContent() {
 
       } catch (e: any) {
           console.error("Decryption failed:", e);
+
+          const isNetworkError = e.message?.toLowerCase().includes("network") ||
+                                 e.message?.toLowerCase().includes("fetch") ||
+                                 e.message?.toLowerCase().includes("drand");
+
+          if (isNetworkError) {
+              toast({ title: "Network Error", description: "Could not reach Drand network. Please retry.", variant: "destructive" });
+              setIsDecrypting(false);
+              isDecryptingRef.current = false;
+              return;
+          }
+
+          if (!capsule.isPrivate) {
+               console.warn("Falling back to plaintext display.");
+               let plainText = typeof capsule.contentEncrypted === 'string'
+                  ? capsule.contentEncrypted
+                  : JSON.stringify(capsule.contentEncrypted);
+
+               setDecryptedText(plainText);
+               setIsDecrypted(true);
+               toast({
+                   title: "⚠️ Unsecured Message",
+                   description: "Content was written directly to contract (Plaintext).",
+                   className: "bg-yellow-600 text-white"
+               });
+               setIsDecrypting(false);
+               isDecryptingRef.current = false;
+               return;
+          }
+
           let msg = "Decryption failed.";
           if(e.message?.includes("Wrong password") || e.message?.includes("Malformed")) msg = "Wrong Password."; 
-          if(e.message?.includes("Drand")) msg = "Network Error (Drand).";
-
-          if(capsule.isPrivate) {
-             toast({ title: "Error", description: msg, variant: "destructive" });
-          }
+          if(capsule.isPrivate) toast({ title: "Error", description: msg, variant: "destructive" });
       } finally {
           setIsDecrypting(false);
           isDecryptingRef.current = false;
@@ -716,49 +761,45 @@ function CapsuleContent() {
   };
 
   const handleMint = () => {
-      if(!capsule) return;
-      // UPDATE: Config Address
+      if(!capsule || !gatewayAddr) {
+          if(!gatewayAddr) toast({ title: "Error", description: "Gateway not found.", variant: "destructive" });
+          return;
+      }
+
+      const gw = gatewayAddr || APP_CONFIG.GATEWAY_ADDRESS;
+
       writeContract({ 
-          address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, 
-          abi: AeveraVaultABI, 
+          address: gw as `0x${string}`, 
+          abi: AeveraGatewayABI, 
           functionName: 'mintCopy', 
-          args: [capsule.id, BigInt(quantity)], 
+          args: [address, capsule.id, BigInt(quantity), false], 
           value: MINT_PRICE * BigInt(quantity) 
       });
   };
 
-  // MINT SUCCESS HANDLING (OPTIMIZED FOR LIVE UPDATE)
   useEffect(() => { 
-      if (isConfirmed && hash) { 
-          // Confetti entfernt
+      if (isConfirmed && hash && mintSuccessHash !== hash) { 
           toast({ title: "Minted!", description: `${quantity} NFT(s) added to your wallet.` });
           setMintSuccessHash(hash);
-
-          // OPTIMISTIC UPDATE: Update UI immediately!
           setCapsule((prev: any) => {
               if(!prev) return null;
-              return {
-                  ...prev,
-                  mintedCount: Number(prev.mintedCount) + quantity
-              };
+              return { ...prev, mintedCount: Number(prev.mintedCount) + quantity };
           });
-
-          // Background Fetch to ensure data consistency later
           setTimeout(() => setForceUpdate(prev => prev + 1), 2000);
       } 
-  }, [isConfirmed, hash, toast, quantity]);
+  }, [isConfirmed, hash, toast, quantity, mintSuccessHash]); 
+
+  const handleCloseSuccess = () => {
+      setMintSuccessHash(null);
+      reset(); 
+  };
 
   useEffect(() => { const updateScale = () => { if (containerRef.current) { const availableWidth = containerRef.current.offsetWidth; if ((availableWidth - 32) < 600) setScale((availableWidth - 32) / 600); else setScale(1); } }; updateScale(); window.addEventListener("resize", updateScale); return () => window.removeEventListener("resize", updateScale); }, []);
 
-  // --- SHARE FUNCTIONS FOR MINT POPUP ---
-  // UPDATE: Hier nutzen wir window.location.origin für dynamische Links
   const handleShareWarpcastMint = () => {
       if(!capsule) return;
       const url = `${window.location.origin}/capsule/${capsule.shortId}`;
-      const text = `I just minted an eternal artifact on @aevera. 
-A piece of history secured on Base. 🔵 #AEVERA
-
-Mint yours here:`;
+      const text = `I just minted an eternal artifact on @aevera. \nA piece of history secured on Base. 🔵 #AEVERA\n\nMint yours here:`;
       const shareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(url)}`;
       window.open(shareUrl, '_blank');
   };
@@ -778,27 +819,18 @@ Mint yours here:`;
       toast({ title: "Copied", description: "Link copied to clipboard." });
   };
 
-  // HELPER FOR MINT QUANTITY
   const incrementMint = () => {
     if(!capsule) return;
     const maxLimit = capsule.isPrivate ? 50 : 5;
     const remaining = capsule.maxSupply - capsule.mintedCount;
-    if (quantity < maxLimit && quantity < remaining) {
-        setQuantity(q => q + 1);
-    }
+    if (quantity < maxLimit && quantity < remaining) setQuantity(q => q + 1);
   };
 
-  const decrementMint = () => {
-    if (quantity > 1) {
-        setQuantity(q => q - 1);
-    }
-  };
+  const decrementMint = () => { if (quantity > 1) setQuantity(q => q - 1); };
 
   const isSoldOut = capsule && Number(capsule.mintedCount) >= Number(capsule.maxSupply);
   const totalPrice = MINT_PRICE * BigInt(quantity);
   const displayPrice = formatEther(totalPrice);
-
-  // CHECK AUTHOR PERMISSION FOR PRIVATE VAULTS
   const isAuthor = capsule && address && capsule.creator && (address.toLowerCase() === capsule.creator.toLowerCase());
   const canMint = !capsule || !capsule.isPrivate || isAuthor;
 
@@ -848,7 +880,7 @@ Mint yours here:`;
                     isRevealed={capsule.isRevealed}
                     isPrivate={capsule.isPrivate}
                     needsPassword={!isDecrypted}
-                    onDecrypt={handleDecrypt} // Hier wird das Passwort (Private) oder "" (Public) übergeben
+                    onDecrypt={handleDecrypt} 
                     onTimerEnd={handleTimerComplete}
                     isDecrypting={isDecrypting}
                     hasAccess={hasAccess}
@@ -859,9 +891,7 @@ Mint yours here:`;
               </div>
 
               <div className="flex flex-col gap-4 w-full mt-8" style={{ maxWidth: `${600 * scale}px`, position: 'relative', zIndex: 10 }}>
-                  {/* NEW COMPACT MINTING PANEL */}
                   <div className="w-full bg-white/5 border border-white/10 rounded-xl backdrop-blur-md overflow-hidden">
-                      {/* Top Info Row */}
                       <div className="flex items-center justify-between px-6 py-3 bg-white/5 border-b border-white/5">
                            <div className="flex items-center gap-2">
                                <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">SUPPLY</span>
@@ -873,38 +903,18 @@ Mint yours here:`;
                            </div>
                       </div>
 
-                      {/* Controls Row */}
-                      {/* ÄNDERUNG: p-2 md:p-4 und gap-2 md:gap-4. Gibt dem Button mehr Platz auf Handy. */}
                       <div className="p-2 md:p-4 flex items-center gap-2 md:gap-4">
-                        {/* Counter */}
                         <div className="flex items-center bg-black/40 border border-white/10 rounded-lg h-12">
-                            <button 
-                                onClick={decrementMint}
-                                disabled={quantity <= 1 || isSoldOut || !canMint}
-                                className="w-12 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30"
-                            >
-                                <Minus size={16} />
-                            </button>
-                            <div className="w-10 text-center font-mono font-bold text-white text-lg">
-                                {quantity}
-                            </div>
-                            <button 
-                                onClick={incrementMint}
-                                disabled={quantity >= (capsule.isPrivate ? 50 : 5) || (Number(capsule.mintedCount) + quantity >= Number(capsule.maxSupply)) || isSoldOut || !canMint}
-                                className="w-12 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30"
-                            >
-                                <Plus size={16} />
-                            </button>
+                            <button onClick={decrementMint} disabled={quantity <= 1 || isSoldOut || !canMint} className="w-12 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30"><Minus size={16} /></button>
+                            <div className="w-10 text-center font-mono font-bold text-white text-lg">{quantity}</div>
+                            <button onClick={incrementMint} disabled={quantity >= (capsule.isPrivate ? 50 : 5) || (Number(capsule.mintedCount) + quantity >= Number(capsule.maxSupply)) || isSoldOut || !canMint} className="w-12 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-30"><Plus size={16} /></button>
                         </div>
 
-                        {/* Mint Button */}
                         {!isConnected ? <Button onClick={openConnectModal} className="flex-1 bg-slate-800 text-white font-bold h-12 rounded-xl">CONNECT WALLET</Button> 
-                        // UPDATE: Check against Config Chain
                         : chain?.id !== APP_CONFIG.ACTIVE_CHAIN.id ? <Button onClick={() => switchChain({ chainId: APP_CONFIG.ACTIVE_CHAIN.id })} className="flex-1 bg-orange-500 text-white font-bold h-12 rounded-xl">SWITCH NETWORK</Button> 
                         : <Button 
                             onClick={handleMint} 
                             disabled={isSoldOut || isWritePending || isConfirming || !canMint} 
-                            // ÄNDERUNG: text-sm md:text-lg hinzugefügt.
                             className={`flex-1 text-sm md:text-lg text-white font-bold h-12 rounded-xl ${capsule.isPrivate ? 'bg-purple-600 hover:bg-purple-500' : 'bg-blue-600 hover:bg-blue-500'} disabled:opacity-50`}
                           >
                             {isConfirming ? <Loader2 className="animate-spin h-5 w-5 mx-auto" /> 
@@ -920,13 +930,24 @@ Mint yours here:`;
                       )}
                   </div>
 
-                  {/* MINT SUCCESS OVERLAY POPUP */}
                   {mintSuccessHash && (
-                      // --- OVERLAY: FIXED INSET-0 ---
-                      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                          <Card className="bg-[#0A0F1E] border border-white/10 w-full max-w-md shadow-2xl relative overflow-hidden">
+                      <div 
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+                        onClick={handleCloseSuccess} // Schließen bei Klick außerhalb + RESET
+                      >
+                          <Card 
+                            className="bg-[#0A0F1E] border border-white/10 w-full max-w-md shadow-2xl relative overflow-hidden"
+                            onClick={(e) => e.stopPropagation()} 
+                          >
                               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10 bg-gradient-to-b from-blue-500/10 to-transparent blur-3xl"></div>
                               <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-600"></div>
+
+                              {/* FIX 4: Close Button im Popup */}
+                              <div className="absolute top-4 right-4 z-50">
+                                <Button variant="ghost" size="icon" onClick={handleCloseSuccess} className="hover:bg-white/10 text-slate-400 hover:text-white rounded-full">
+                                    <X className="w-5 h-5" />
+                                </Button>
+                              </div>
 
                               <CardContent className="p-8 text-center flex flex-col items-center relative z-10">
                                   <div className="relative w-20 h-20 rounded-full border-2 border-blue-500/50 bg-blue-950/30 text-blue-400 flex items-center justify-center shadow-[0_0_30px_rgba(0,0,0,0.5)] mb-6">
@@ -942,7 +963,6 @@ Mint yours here:`;
                                   </p>
 
                                   <div className="flex gap-3 w-full mb-4">
-                                      {/* VIEW NFT */}
                                       <Button 
                                         onClick={() => {
                                             const newNft: MintEventData = {
@@ -950,7 +970,6 @@ Mint yours here:`;
                                                 timestamp: BigInt(Math.floor(Date.now() / 1000)),
                                                 txHash: mintSuccessHash,
                                                 type: 'COPY',
-                                                // FIX: Neue Felder für Batch-Kompatibilität
                                                 startSerial: 0, 
                                                 endSerial: quantity > 1 ? quantity - 1 : 0,
                                                 amount: quantity,
@@ -964,8 +983,6 @@ Mint yours here:`;
                                           VIEW NFT <Eye size={16} className="ml-2"/>
                                       </Button>
 
-                                      {/* PROOF */}
-                                      {/* UPDATE: Dynamic Explorer Link from Config */}
                                       <Button 
                                         onClick={() => window.open(`${APP_CONFIG.EXPLORER_URL}/tx/${mintSuccessHash}`, '_blank')} 
                                         className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 h-12 font-bold rounded-xl"
@@ -988,7 +1005,7 @@ Mint yours here:`;
                                   </div>
 
                                   <div className="pt-6 border-t border-white/5 w-full">
-                                      <button onClick={() => setMintSuccessHash(null)} className="text-xs uppercase tracking-widest text-slate-500 hover:text-white transition-colors flex items-center justify-center gap-2 w-full">
+                                      <button onClick={handleCloseSuccess} className="text-xs uppercase tracking-widest text-slate-500 hover:text-white transition-colors flex items-center justify-center gap-2 w-full">
                                           <ArrowLeft size={14} /> Back to Capsule
                                       </button>
                                   </div>
@@ -1001,7 +1018,6 @@ Mint yours here:`;
         )}
       </main>
 
-      {/* NFT LISTE UND PREVIEW MODAL */}
       {capsule && (
           <div className="w-full mt-16 -mb-20 animate-in slide-in-from-bottom-8 duration-700">
               <MintTable 
@@ -1012,7 +1028,6 @@ Mint yours here:`;
           </div>
       )}
 
-      {/* DAS ECHTE ON-CHAIN MODAL */}
       <NFTDetailModal 
         nft={selectedNft} 
         capsule={capsule} 

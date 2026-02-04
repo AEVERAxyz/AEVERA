@@ -9,20 +9,24 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      // Nur noch der Alias für den Client ist da. 
-      // @shared ist gelöscht, da wir kein Backend mehr haben.
       "@": path.resolve(rootDir, "client", "src"),
     },
   },
-  // Vite soll im 'client' Ordner starten (wo die index.html liegt)
   root: path.resolve(rootDir, "client"),
   build: {
-    // Das Ergebnis soll im Hauptordner 'dist' landen
     outDir: path.resolve(rootDir, "dist"),
     emptyOutDir: true,
   },
   server: {
     host: "0.0.0.0",
-    allowedHosts: true,
+    allowedHosts: true, // Erlaubt Replit URLs
+    // WICHTIG: Die Brücke zum lokalen Server
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
 });

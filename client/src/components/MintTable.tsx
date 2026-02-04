@@ -3,7 +3,8 @@ import { useReadContract } from "wagmi";
 import { Loader2, ExternalLink, User, Layers, RefreshCw } from "lucide-react"; 
 import { cn } from "@/lib/utils";
 import { parseAbiItem, createPublicClient, http, fallback } from "viem"; 
-import AeveraVaultABI from "@/abis/AeveraVaultABI.json"; 
+// UPDATE: V2 ABI Import
+import AeveraVaultABI from "@/abis/AeveraEternalVault.json"; 
 import { APP_CONFIG } from "@/lib/config"; 
 
 // --- TYPE EXPORTIEREN ---
@@ -26,9 +27,8 @@ interface MintTableProps {
 }
 
 // TUNING FÜR SPEED 🏎️
-// Wir vertrauen auf die Multi-RPC Rotation, daher sind wir aggressiver.
-const CHUNK_SIZE = 10000n; // Viel größere Happen (Testnet/Mainnet vertragen das oft)
-const BATCH_SIZE = 5;      // 5 Anfragen absolut gleichzeitig
+const CHUNK_SIZE = 10000n; 
+const BATCH_SIZE = 5;      
 
 export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) {
   const [events, setEvents] = useState<MintEventData[]>([]);
@@ -37,13 +37,12 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
   const [error, setError] = useState<string | null>(null);
   const [totalMintedCount, setTotalMintedCount] = useState(0);
 
-  // Der Client holt sich die Liste direkt aus dem Gehirn (config.ts)
   const publicClientRef = useRef(createPublicClient({
       chain: APP_CONFIG.ACTIVE_CHAIN,
       transport: fallback(
           APP_CONFIG.RPC_LIST.map(url => http(url, { 
               batch: true, 
-              timeout: 6000 // Nur 6s warten, dann sofort nächsten Server probieren!
+              timeout: 6000 
           })),
           { rank: true } 
       )
@@ -57,16 +56,19 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
   const badgeBg = isPrivate ? "bg-purple-500/10" : "bg-cyan-500/10";
   const badgeBorder = isPrivate ? "border-purple-500/20" : "border-cyan-500/20";
 
+  // UPDATE: Adresse auf VAULT_ADDRESS geändert
   const { data: capsuleData } = useReadContract({
-    address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
+    address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`,
     abi: AeveraVaultABI,
     functionName: "capsules",
     args: [capsuleId],
   });
 
   const capsuleDataArray = capsuleData as any[] | undefined;
+  // V2 Indizes: [creator, author, shortId, uuid, sealTime...]
   const shortId = capsuleDataArray ? capsuleDataArray[2] : "...";
-  const sealedAt = capsuleDataArray ? Number(capsuleDataArray[6]) : 0;
+  // UPDATE: sealedAt ist jetzt Index 4 (vorher 6)
+  const sealedAt = capsuleDataArray ? Number(capsuleDataArray[4]) : 0;
 
   // --- MAIN FETCH FUNCTION ---
   const fetchSmartHistory = async (isBackgroundUpdate = false) => {
@@ -85,16 +87,13 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
         const filterId = BigInt(capsuleId);
         const currentBlock = await client.getBlockNumber();
 
-        // Startblock berechnen
         const now = Math.floor(Date.now() / 1000);
         const ageSeconds = now - sealedAt;
-        // Kleinerer Puffer für mehr Speed, aber sicher genug (2000 Blöcke)
         const estimatedBlockDiff = BigInt(Math.floor(ageSeconds / 2)) + 2000n; 
 
         let startBlock = currentBlock - estimatedBlockDiff;
         if (startBlock < 0n) startBlock = 0n;
 
-        // Ranges erstellen
         const ranges = [];
         let cursor = startBlock;
         while (cursor <= currentBlock) {
@@ -108,45 +107,33 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
         let allLogs: any[] = [];
 
-        // BATCH PROCESSING (OHNE DELAY)
-        // Wir feuern so schnell wie möglich.
+        // BATCH PROCESSING
         for (let i = 0; i < ranges.length; i += BATCH_SIZE) {
             if (!isMountedRef.current) break;
 
             const batch = ranges.slice(i, i + BATCH_SIZE);
 
-            // KEIN 'await delay()' mehr hier! Vollgas.
-
             try {
+                // UPDATE: Wir nutzen jetzt Standard ERC1155 Events (TransferSingle)
                 const batchResults = await Promise.all(
                     batch.map(async (range) => {
-                        return Promise.all([
-                            client.getLogs({
-                                address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
-                                event: parseAbiItem('event CapsuleCreated(uint256 indexed id, string uuid, string shortId, address indexed author)'),
-                                args: { id: filterId }, 
-                                fromBlock: range.from,
-                                toBlock: range.to
-                            }),
-                            client.getLogs({
-                                address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
-                                event: parseAbiItem('event CapsuleMinted(uint256 indexed id, address indexed minter, uint256 amount)'),
-                                args: { id: filterId },
-                                fromBlock: range.from,
-                                toBlock: range.to
-                            })
-                        ]);
+                        return client.getLogs({
+                            address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`,
+                            event: parseAbiItem('event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)'),
+                            args: { 
+                                id: filterId,
+                                from: '0x0000000000000000000000000000000000000000' // Nur Mints (From Zero)
+                            }, 
+                            fromBlock: range.from,
+                            toBlock: range.to
+                        });
                     })
                 );
 
-                for (const [genesisLogs, mintLogs] of batchResults) {
-                    allLogs.push(
-                        ...genesisLogs.map(l => ({ ...l, _type: "GENESIS" })), 
-                        ...mintLogs.map(l => ({ ...l, _type: "COPY" }))
-                    );
+                for (const logs of batchResults) {
+                    allLogs.push(...logs);
                 }
 
-                // UI Update nur alle paar Batches, spart Render-Zeit
                 if (!isBackgroundUpdate && ranges.length > 10 && i % (BATCH_SIZE * 2) === 0) {
                      const progress = Math.min((i + BATCH_SIZE) / ranges.length * 100, 100);
                      setStatusMsg(`Syncing... ${progress.toFixed(0)}%`);
@@ -154,8 +141,6 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
             } catch (batchError) {
                 console.warn("Node busy, switching...", batchError);
-                // Wenn ein Node blockt, probieren wir es EINMAL mit kurzer Pause,
-                // ansonsten wirft 'viem' automatisch den nächsten Provider an.
                 await new Promise(r => setTimeout(r, 1000));
                 i -= BATCH_SIZE; 
                 continue;
@@ -163,28 +148,27 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
         }
 
         // --- DATEN VERARBEITEN ---
-        const genesisEvent = allLogs.find(l => l._type === "GENESIS");
-        const genesisBlockNumber = genesisEvent ? genesisEvent.blockNumber : startBlock;
-
+        // V2 Logik: Alles sind 'TransferSingle' Events.
         const rawEvents = allLogs.map((log: any) => {
             const blockNum = BigInt(log.blockNumber);
-            const genBlockNum = BigInt(genesisBlockNumber);
-            const blockDiff = blockNum - genBlockNum;
+            // Grobe Schätzung für Timestamp (besser als gar nichts)
+            const estimatedTimestamp = BigInt(sealedAt); 
 
-            const estimatedTimestamp = BigInt(sealedAt) + (blockDiff * 2n);
-            const amount = log._type === "GENESIS" ? 1 : Number(log.args.amount || 1);
+            // Args: operator, from, to, id, value
+            const amount = Number(log.args.value || 1);
 
             return {
                 txHash: log.transactionHash,
-                minter: log._type === "GENESIS" ? log.args.author : log.args.minter,
-                timestamp: estimatedTimestamp,
-                type: log._type as "GENESIS" | "COPY",
+                minter: log.args.to, // Empfänger ist der Minter
+                timestamp: estimatedTimestamp, // Placeholder, wird oft nicht angezeigt in Tabelle
+                type: "COPY", // Wir setzen erst mal alles auf Copy
                 amount: amount,
                 blockNumber: log.blockNumber,
                 logIndex: log.logIndex,
             };
         });
 
+        // Sortieren: Älteste zuerst für Serial Number Berechnung
         rawEvents.sort((a, b) => {
             if (a.blockNumber < b.blockNumber) return -1;
             if (a.blockNumber > b.blockNumber) return 1;
@@ -197,8 +181,12 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
             const endSerial = runningCounter + event.amount - 1;
             runningCounter += event.amount;
 
+            // V2 GENESIS ERKENNUNG: Das allererste Item (Serial 0) ist das Original
+            const finalType = startSerial === 0 ? "GENESIS" : "COPY";
+
             return {
                 ...event,
+                type: finalType as "GENESIS" | "COPY",
                 startSerial,
                 endSerial,
                 serialNumber: startSerial 
@@ -207,6 +195,7 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
         if (isMountedRef.current) {
             setTotalMintedCount(runningCounter);
+            // Tabelle zeigt neueste zuerst
             setEvents(calculatedEvents.reverse()); 
             setError(null);
         }
@@ -240,6 +229,8 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
 
   const formatDate = (timestamp: bigint) => {
     if (!timestamp) return "-";
+    // Falls Timestamp 0 ist (Fallback), zeigen wir "sealedAt" an oder "-"
+    if (timestamp === 0n) return "-";
     return new Date(Number(timestamp) * 1000).toLocaleString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC'
     }) + ' UTC';

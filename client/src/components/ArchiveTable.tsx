@@ -6,16 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils"; 
-import AeveraVaultABI from "@/abis/AeveraVaultABI.json"; 
+// UPDATE: V2 ABI Import
+import AeveraVaultABI from "../abis/AeveraEternalVault.json"; 
 import { APP_CONFIG } from "@/lib/config"; // Das neue Gehirn
 
 export function ArchiveTable() {
   const [search, setSearch] = useState("");
   const [, setLocation] = useLocation();
 
-  // 1. Hole 'nextTokenId' (Alle 3s aktualisieren) - Jetzt aus der Config
+  // 1. Hole 'nextTokenId' (Alle 3s aktualisieren) - Jetzt vom VAULT
   const { data: nextTokenId, isLoading: isCountLoading } = useReadContract({
-    address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`,
+    address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`, // UPDATE
     abi: AeveraVaultABI,
     functionName: "nextTokenId", 
     query: { refetchInterval: 3000 }
@@ -34,10 +35,10 @@ export function ArchiveTable() {
     return ids;
   }, [nextTokenId]);
 
-  // 3. Batch Fetching der Kapsel-Daten (Standard Read - Schnell & Stabil)
+  // 3. Batch Fetching der Kapsel-Daten (VAULT ADRESSE)
   const { data: rawCapsuleData, isLoading: isDataLoading } = useReadContracts({
     contracts: capsuleIds.map((id) => ({
-      address: APP_CONFIG.CONTRACT_ADDRESS as `0x${string}`, // Config nutzt autom. das richtige Netz
+      address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`, // UPDATE
       abi: AeveraVaultABI as any,
       functionName: "capsules",
       args: [id],
@@ -45,7 +46,18 @@ export function ArchiveTable() {
     query: { refetchInterval: 3000 }
   });
 
-  // 4. Daten Mappen (Keine komplexe Logik mehr, nur pure Daten)
+  // 3b. NEU: Batch Fetching Supply (Extra Call für V2 notwendig)
+  const { data: rawSupplyData } = useReadContracts({
+    contracts: capsuleIds.map((id) => ({
+      address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`,
+      abi: AeveraVaultABI as any,
+      functionName: "totalSupplyPerId",
+      args: [id],
+    })),
+    query: { refetchInterval: 3000 }
+  });
+
+  // 4. Daten Mappen (V2 Struct Parsing)
   const processedCapsules = useMemo(() => {
     if (!rawCapsuleData) return [];
 
@@ -56,17 +68,20 @@ export function ArchiveTable() {
         const data = result.result as any; 
         const idBigInt = capsuleIds[index];
 
-        // --- FIX FOR DATA SHIFTING (Contract V12 Update) ---
-        // 0: id, 1: uuid, 2: shortId, 3: author, 4: creator (NEW), 
-        // 5: content, 6: mintTimestamp, 7: unlockTimestamp, 8: isPrivate, 9: currentSupply
+        // --- FIX FOR V2 STRUCT INDICES ---
+        // 0: creator, 1: author, 2: shortId, 3: uuid, 
+        // 4: sealTime, 5: unlockTime, 6: isPrivate, 7: contentPointer
 
         const shortId = data[2];
-        const author = data[3];
-        // data[4] is creator address
-        const sealedAt = data[6]; // Shifted from 5 to 6
-        const revealDate = data[7]; // Shifted from 6 to 7
-        const isPrivate = data[8]; // Shifted from 7 to 8
-        const currentSupply = data[9]; // New Field: Supply
+        const author = data[1];     // V2 Index
+        // data[0] is creator
+        const sealedAt = data[4];   // V2 Index
+        const revealDate = data[5]; // V2 Index
+        const isPrivate = data[6];  // V2 Index
+
+        // Supply from extra hook
+        const supplyRes = rawSupplyData?.[index];
+        const currentSupply = supplyRes?.status === "success" ? supplyRes.result : 0n;
 
         const now = Math.floor(Date.now() / 1000);
         const isRevealedTime = Number(revealDate) <= now;
@@ -93,7 +108,7 @@ export function ArchiveTable() {
     }
 
     return capsules;
-  }, [rawCapsuleData, capsuleIds, search]);
+  }, [rawCapsuleData, rawSupplyData, capsuleIds, search]);
 
   const formatDate = (timestamp: bigint) => {
     if (!timestamp) return "-";
@@ -181,7 +196,7 @@ export function ArchiveTable() {
                       processedCapsules.map((capsule) => {
                         if(!capsule) return null;
 
-                        // Max Supply Berechnung (Config nutzen wäre hier auch möglich, aber hardcoded ist ok da Konstanten)
+                        // Max Supply Berechnung
                         const maxSupply = capsule.isPrivate ? 1000 : 100;
 
                         return (
@@ -226,10 +241,10 @@ export function ArchiveTable() {
                             </td>
 
                              {/* TAUSCH: Proof Link hier (links von Minted) */}
-                             {/* UPDATE: Dynamischer Link aus der Config */}
+                             {/* UPDATE: Dynamischer Link aus der Config (VAULT ADRESSE) */}
                              <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
                                 <a 
-                                  href={`${APP_CONFIG.EXPLORER_URL}/token/${APP_CONFIG.CONTRACT_ADDRESS}?a=${capsule.id.toString()}`}
+                                  href={`${APP_CONFIG.EXPLORER_URL}/token/${APP_CONFIG.VAULT_ADDRESS}?a=${capsule.id.toString()}`}
                                   target="_blank" 
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-500 hover:text-[#1652F0] transition-colors group/link"
