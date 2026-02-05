@@ -87,6 +87,7 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
         const filterId = BigInt(capsuleId);
         const currentBlock = await client.getBlockNumber();
 
+        // ZEITREISE-OPTIMIERUNG: Wir starten erst bei der Geburt der Kapsel!
         const now = Math.floor(Date.now() / 1000);
         const ageSeconds = now - sealedAt;
         const estimatedBlockDiff = BigInt(Math.floor(ageSeconds / 2)) + 2000n; 
@@ -121,8 +122,9 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
                             address: APP_CONFIG.VAULT_ADDRESS as `0x${string}`,
                             event: parseAbiItem('event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)'),
                             args: { 
-                                id: filterId,
-                                from: '0x0000000000000000000000000000000000000000' // Nur Mints (From Zero)
+                                // FIX: 'id' entfernt, da im ERC1155 Standard nicht 'indexed'.
+                                // Wir filtern stattdessen unten im Code ("Client-Side Filtering").
+                                from: '0x0000000000000000000000000000000000000000' 
                             }, 
                             fromBlock: range.from,
                             toBlock: range.to
@@ -131,7 +133,10 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
                 );
 
                 for (const logs of batchResults) {
-                    allLogs.push(...logs);
+                    // FIX: Manuelles Filtern nach ID. 
+                    // Wir werfen alles weg, was nicht zu UNSERER Kapsel gehört.
+                    const relevantLogs = logs.filter(l => l.args.id === filterId);
+                    allLogs.push(...relevantLogs);
                 }
 
                 if (!isBackgroundUpdate && ranges.length > 10 && i % (BATCH_SIZE * 2) === 0) {
@@ -150,7 +155,7 @@ export function MintTable({ capsuleId, isPrivate, onRowClick }: MintTableProps) 
         // --- DATEN VERARBEITEN ---
         // V2 Logik: Alles sind 'TransferSingle' Events.
         const rawEvents = allLogs.map((log: any) => {
-            const blockNum = BigInt(log.blockNumber);
+            // const blockNum = BigInt(log.blockNumber); // Unused currently
             // Grobe Schätzung für Timestamp (besser als gar nichts)
             const estimatedTimestamp = BigInt(sealedAt); 
 
