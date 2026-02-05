@@ -302,9 +302,11 @@ export default function Home() {
       const appHandle = platform === 'farcaster' ? '@aevera' : '@AEVERAxyz';
 
       if (mode === 'private') {
-          return `I just secured a Private Vault on ${appHandle}. 白\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nView my vault: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
+          // FIX: Ersetze kaputtes Zeichen durch Schloss-Emoji 🔒
+          return `I just secured a Private Vault on ${appHandle}. 🔒\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nView my vault: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
       } else {
-          return `I just anchored a message in time on ${appHandle}. 竢ｳ\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nMint my legacy as NFT: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
+          // FIX: Ersetze kaputtes Zeichen durch Sanduhr-Emoji ⏳
+          return `I just anchored a message in time on ${appHandle}. ⏳\n\nVerified. Eternal. Secured on ${baseHandle}. #AEVERA\n\nMint my legacy as NFT: ${capsuleUrl}\nSeal your own legacy: ${homeUrl}`;
       }
   };
 
