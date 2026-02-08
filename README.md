@@ -74,6 +74,12 @@ AEVERA enforces strict identity verification.
 
 ---
 
+## 🏗️ Team
+
+**Lead Architect & Founder:** [@0xgelassen](https://github.com/0xgelassen)
+
+---
+
 ## 🔗 Links
 
 * **DApp:** [https://aevera.xyz](https://aevera.xyz)
